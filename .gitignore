@@ -59,5 +59,8 @@ temp_*
 *.txt
 # Exception: keep README and script-like files
 !README.md
-!mapping_and_counting/README.md
+!01_mapping_and_counting/README.md
+!01_mapping_and_counting/Arabidopsis_Zea_rRNA.fasta
+!01_mapping_and_counting/TruSeq3-SE.fa
+!metadata.txt
 !*.txt  # We'll probably want metadata.txt but maybe not all .txt files.
