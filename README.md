@@ -3,7 +3,7 @@ Scripts and methods for the paper: Dysregulation of underground sink networks li
 
 ## Repository Structure
 
-The project repository is organized into modular directories reflecting the bioinformatic and analytical pipeline:
+The repository is organized into directories following the data processing and analysis pipeline described in the paper:
 
 - `01_mapping_and_counting/`: Shell and R scripts for quality control, adapter trimming, STAR alignment, and gene/orthogroup quantification.
 - `02_orthology_inference/`: Scripts for orthogroup identification and cross-species count normalization.
@@ -17,12 +17,7 @@ Each directory contains its own `README.md` with specific instructions on how to
 
 ### Prerequisites
 
-The following software is generally required across the modules:
-- STAR (Alignment)
-- Trimmomatic (Trimming)
-- minimap2 (rRNA filtering)
-- R (with Tidyverse and other specialized packages)
-- Samtools
+Required software is listed in each directory. 
 
 ### Reproducibility
 
