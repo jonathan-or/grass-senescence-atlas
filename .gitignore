@@ -1,0 +1,63 @@
+# R temporary files and large objects
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+.Rapp.history
+*.rds
+*.RData
+*.RDataTmp
+renv/
+
+# Plot and result files (often large)
+*.tiff
+*.png
+*.jpg
+*.pdf
+*.html
+*.xlsx
+*.csv
+# Exception: small reference or metadata CSVs can be force-added if needed
+# !metadata.txt
+# !*.csv
+
+# Large bioinformatics files
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.bam
+*.bai
+*.sam
+*.stats
+*.log
+*.fasta
+*.fa
+# Exception: Small adapter or rRNA reference files
+!mapping_and_counting/Arabidopsis_Zea_rRNA.fasta
+!mapping_and_counting/TruSeq3-SE.fa
+
+# STAR genome indices and temporary files
+*_STARtmp/
+Genome
+SA
+SAindex
+GenomeParameters.txt
+sjdbList.fromGTF.out.tab
+sjdbList.out.tab
+sjdbInfo.txt
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Other temporary or large files
+temp_*
+*.tmp
+*.temp
+*.tsv
+*.txt
+# Exception: keep README and script-like files
+!README.md
+!mapping_and_counting/README.md
+!*.txt  # We'll probably want metadata.txt but maybe not all .txt files.
