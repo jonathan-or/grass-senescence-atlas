@@ -62,7 +62,12 @@ temp_*
 !01_mapping_and_counting/README.md
 !01_mapping_and_counting/Arabidopsis_Zea_rRNA.fasta
 !01_mapping_and_counting/TruSeq3-SE.fa
-!02_orthology_inference/*.gff.gz
-!02_orthology_inference/*.gff3.gz
+!02_orthology_inference_and_read_aggregation/*.gff.gz
+!02_orthology_inference_and_read_aggregation/*.gff3.gz
 !metadata.txt
 !*.txt  # We'll probably want metadata.txt but maybe not all .txt files.
+
+# Exclude legacy raw data directories
+pot-in-pot/
+remobilization/
+end_of_season/
