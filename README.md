@@ -6,7 +6,7 @@ This repository contains the analysis pipeline and scripts for the study: Dysreg
 The repository is organized into directories following the data processing and analysis pipeline described in the paper:
 
 - `01_mapping_and_counting/`: Shell and R scripts for quality control, adapter trimming, STAR alignment, and gene/orthogroup quantification.
-- `02_orthology_inference/`: Scripts for orthogroup identification and cross-species count normalization.
+- `02_orthology_inference_and_read_aggregation/`: Scripts for orthogroup identification and cross-species count aggregation.
 - `03_cross-species_transcriptome_analysis/`: Integrated analysis of the 14-species atlas, including PCA, Z-score expression modeling, and pseudotime trajectory inference.
 - `04_photosynthetic_index/`: Calculation of the ps_index and its correlation with physiological nitrogen and amino acid data.
 - `05_gene_network_analysis/`: WGCNA and regulatory network inference focused on remobilizing perennial accessions.
