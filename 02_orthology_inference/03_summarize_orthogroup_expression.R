@@ -1,0 +1,210 @@
+# Command line arguments for base directory
+args <- commandArgs(trailingOnly = TRUE)
+base_dir <- if (length(args) > 0) args[1] else getwd()
+
+# For this script you'll need to load the count data (count_data_frames)
+count_data_path <- file.path(base_dir, "pot-in-pot", "count_data_frames.rds") # Defaulting to pot-in-pot source for now
+if (!file.exists(count_data_path)) {
+  count_data_path <- file.path(base_dir, "count_data_frames.rds")
+}
+count_data_frames <- readRDS(count_data_path)
+
+# Load required libraries
+library(dplyr)
+
+# Load the orthogroups data
+# Adjust path to find Orthogroups.tsv in the project root or source folders
+og_path <- file.path(base_dir, "pot-in-pot", "Orthogroups.tsv")
+if (!file.exists(og_path)) {
+  og_path <- file.path(base_dir, "Orthogroups.tsv")
+}
+OGs <- read.table(file = og_path,
+                   sep = '\t', header = TRUE, quote = '', stringsAsFactors = FALSE)
+
+#Rename A. virginicus as A. virginicum
+OGs <- OGs %>%
+  rename(Anatherum_virginicum = Andropogon_virginicus)
+
+# Calculate the number of missing species (empty fields) per orthogroup
+speciesNum <- apply(OGs[, 2:ncol(OGs)], 1, function(x) length(which(x == '')))
+
+# Filter orthogroups with  missing species
+filteredOG <- OGs[which(speciesNum == 0), ]
+
+# Calculate the total number of genes for species columns
+geneNum <- apply(filteredOG[, 2:15], 1, function(x) sum(unlist(lapply(strsplit(x, ', '), length))))
+
+# Plot the gene number distribution with 25 bins
+hist(geneNum, 
+  main = "Distribution of gene homologs in orthogroups present in all species", 
+  xlab = "Number of Genes in Orthogroup", 
+  ylab = "Frequency", 
+  breaks = 50,  # Set the number of bins
+  col = "lightblue",  # Optional: add color for better visualization
+  border = "black")
+
+# Remove orthogroups with more than 75 genes
+filteredOG <- filteredOG[which(geneNum <= 75), ]
+
+# Check the filtered result
+str(filteredOG)
+head(filteredOG)
+
+# Function to clean gene identifiers (.1 for helixer assemblies/transcript for Zm) in each cell
+clean_gene_ids <- function(gene_col, species) {
+  # Use strsplit to split by comma within each cell, but keep it within each row
+  cleaned_genes <- sapply(gene_col, function(cell) {
+    # Split by comma to handle multiple gene IDs within each cell
+    gene_ids <- unlist(strsplit(cell, ", "))
+    
+    # Apply cleaning based on species type
+    if (species == "Zea_mays") {
+      gene_ids <- gsub("_T0[0-9]+$", "", gene_ids) # Remove "_T0XX" for Zea mays
+    } else {
+      gene_ids <- gsub("\\.\\d+$", "", gene_ids)   # Remove ".1" or similar for other species
+    }
+    
+    # Rejoin cleaned IDs with commas
+    paste(gene_ids, collapse = ", ")
+  })
+  
+  return(cleaned_genes)
+}
+
+# Apply the function to each species column
+filteredOG$Andropogon_gerardii      <- clean_gene_ids(filteredOG$Andropogon_gerardii,      "Andropogon_gerardii")
+filteredOG$Anatherum_virginicum     <- clean_gene_ids(filteredOG$Anatherum_virginicum,     "Anatherum_virginicum")
+filteredOG$Bothriochloa_laguroides  <- clean_gene_ids(filteredOG$Bothriochloa_laguroides,  "Bothriochloa_laguroides")
+filteredOG$Chrysopogon_zizanioides  <- clean_gene_ids(filteredOG$Chrysopogon_zizanioides,  "Chrysopogon_zizanioides")
+filteredOG$Elionorus_tripsacoides   <- clean_gene_ids(filteredOG$Elionorus_tripsacoides,   "Elionorus_tripsacoides")
+filteredOG$Miscanthus_giganteus     <- clean_gene_ids(filteredOG$Miscanthus_giganteus,     "Miscanthus_giganteus")
+filteredOG$Panicum_virgatum         <- clean_gene_ids(filteredOG$Panicum_virgatum,         "Panicum_virgatum")
+filteredOG$Schizachyrium_scoparium  <- clean_gene_ids(filteredOG$Schizachyrium_scoparium,  "Schizachyrium_scoparium")
+filteredOG$Sorghastrum_nutans       <- clean_gene_ids(filteredOG$Sorghastrum_nutans,       "Sorghastrum_nutans")
+filteredOG$Sorghum_bicolor          <- clean_gene_ids(filteredOG$Sorghum_bicolor,          "Sorghum_bicolor")
+filteredOG$Themeda_triandra         <- clean_gene_ids(filteredOG$Themeda_triandra,         "Themeda_triandra")
+filteredOG$Tripsacum_dactyloides    <- clean_gene_ids(filteredOG$Tripsacum_dactyloides,    "Tripsacum_dactyloides")
+filteredOG$Zea_diploperennis        <- clean_gene_ids(filteredOG$Zea_diploperennis,        "Zea_diploperennis")
+filteredOG$Zea_mays                 <- clean_gene_ids(filteredOG$Zea_mays,                 "Zea_mays")
+
+# Check the structure after cleaning
+str(filteredOG)
+
+# Apply the function to each species column
+OGs$Andropogon_gerardii      <- clean_gene_ids(OGs$Andropogon_gerardii,      "Andropogon_gerardii")
+OGs$Anatherum_virginicum     <- clean_gene_ids(OGs$Anatherum_virginicum,     "Anatherum_virginicum")
+OGs$Bothriochloa_laguroides  <- clean_gene_ids(OGs$Bothriochloa_laguroides,  "Bothriochloa_laguroides")
+OGs$Chrysopogon_zizanioides  <- clean_gene_ids(OGs$Chrysopogon_zizanioides,  "Chrysopogon_zizanioides")
+OGs$Elionorus_tripsacoides   <- clean_gene_ids(OGs$Elionorus_tripsacoides,   "Elionorus_tripsacoides")
+OGs$Miscanthus_giganteus     <- clean_gene_ids(OGs$Miscanthus_giganteus,     "Miscanthus_giganteus")
+OGs$Panicum_virgatum         <- clean_gene_ids(OGs$Panicum_virgatum,         "Panicum_virgatum")
+OGs$Schizachyrium_scoparium  <- clean_gene_ids(OGs$Schizachyrium_scoparium,  "Schizachyrium_scoparium")
+OGs$Sorghastrum_nutans       <- clean_gene_ids(OGs$Sorghastrum_nutans,       "Sorghastrum_nutans")
+OGs$Sorghum_bicolor          <- clean_gene_ids(OGs$Sorghum_bicolor,          "Sorghum_bicolor")
+OGs$Themeda_triandra         <- clean_gene_ids(OGs$Themeda_triandra,         "Themeda_triandra")
+OGs$Tripsacum_dactyloides    <- clean_gene_ids(OGs$Tripsacum_dactyloides,    "Tripsacum_dactyloides")
+OGs$Zea_diploperennis        <- clean_gene_ids(OGs$Zea_diploperennis,        "Zea_diploperennis")
+OGs$Zea_mays                 <- clean_gene_ids(OGs$Zea_mays,                 "Zea_mays")
+
+prepareGeneOGMapping <- function(filteredOG) {
+  gene_og_mapping <- filteredOG %>%
+    tidyr::pivot_longer(cols = -Orthogroup,
+                        names_to = "Species",
+                        values_to = "GeneIDs") %>%
+    tidyr::separate_rows(GeneIDs, sep = ",\\s*") %>%
+    dplyr::mutate(GeneIDs = trimws(GeneIDs)) %>%
+    dplyr::select(Orthogroup, Species, GeneID = GeneIDs)
+  
+  return(gene_og_mapping)
+}
+
+# Apply function to create gene-OG mapping
+gene_og_mapping <- prepareGeneOGMapping(filteredOG)
+
+# Function to aggregate counts by OG within each library (this works for libraries that start with AC)
+sumExp_OG <- function(count_data, gene_og_mapping, all_OGs) {
+  # Convert count_data to a data frame and ensure row names are a column
+  count_data_df <- as.data.frame(count_data)
+  count_data_df$GeneID <- rownames(count_data)
+
+  # Merge count data with gene-OG mapping on GeneID
+  merged_data <- merge(count_data_df, gene_og_mapping, by = "GeneID")
+
+  # Aggregate counts by OG, summing within each library
+  summarized_counts <- merged_data %>%
+    dplyr::group_by(Orthogroup) %>%
+    dplyr::summarise(across(starts_with("AC"), ~ sum(.x, na.rm = TRUE)))
+
+  # Convert to a data frame and set OG as row names
+  summarized_counts <- summarized_counts %>% tibble::column_to_rownames("Orthogroup")
+
+  # Ensure all OGs are present in the summarized data, filling missing OGs with zeros
+  missing_OGs <- setdiff(all_OGs, rownames(summarized_counts))
+  if (length(missing_OGs) > 0) {
+    missing_df <- matrix(as.integer(0), nrow = length(missing_OGs), ncol = ncol(summarized_counts))
+    rownames(missing_df) <- missing_OGs
+    colnames(missing_df) <- colnames(summarized_counts)
+
+    # Bind missing OGs with zero counts
+    summarized_counts <- rbind(summarized_counts, missing_df)
+  }
+
+  # Return the completed data frame
+  return(summarized_counts)
+}
+
+# Create a union of all OGs across species
+all_OGs <- unique(filteredOG$Orthogroup)
+
+# Create an empty list for summarized expression data
+summarized_expression_OG <- list()
+
+# Apply the function to each species' count data
+summarized_expression_OG <- lapply(names(count_data_frames), function(species_name) {
+  count_data <- count_data_frames[[species_name]]
+  
+  # Filter gene_og_mapping to include only the entries for the current species
+  species_og_mapping <- gene_og_mapping %>% filter(Species == species_name)
+
+  # Apply the sumExp_OG function, ensuring uniform OGs across species
+  summarized_counts <- sumExp_OG(count_data, species_og_mapping, all_OGs)
+
+  return(summarized_counts)
+})
+
+# Name each list element in summarized_expression_OG by species name
+names(summarized_expression_OG) <- names(count_data_frames)
+
+# Check consistency across species
+sapply(summarized_expression_OG, nrow)
+
+# Verify result
+str(summarized_expression_OG)
+
+# Check if the change was successful
+sapply(summarized_expression_OG, nrow)
+
+# Extract the list of Orthogroups
+required_orthogroups <- unique(filteredOG$Orthogroup)
+
+# Save the list to a file
+writeLines(required_orthogroups, file.path(base_dir, "02_orthology_inference", "required_orthogroups.txt"))
+
+# Step 1: Count the number of species with at least one gene per orthogroup
+species_with_genes <- apply(OGs[, 2:ncol(OGs)], 1, function(x) sum(x != ""))
+
+# Step 2: Filter orthogroups where at least 2 species have a gene
+partialOGs <- OGs[species_with_genes >= 2, ]
+
+# Step 3: Remove orthogroups that are already in filteredOG
+partialOGs <- partialOGs[!partialOGs$Orthogroup %in% filteredOG$Orthogroup, ]
+
+# Step 4: Check the result
+cat("Number of orthogroups in partialOGs after removing filteredOG:", nrow(partialOGs), "\n")
+head(partialOGs)
+
+# Save results to RDS files in the objective directory
+saveRDS(OGs, file = file.path(base_dir, "02_orthology_inference", "OGs.rds"))
+saveRDS(filteredOG, file = file.path(base_dir, "02_orthology_inference", "filteredOG.rds"))
+saveRDS(partialOGs, file = file.path(base_dir, "02_orthology_inference", "partialOGs.rds"))
+saveRDS(summarized_expression_OG, file = file.path(base_dir, "02_orthology_inference", "summarized_expression_OG.rds"))

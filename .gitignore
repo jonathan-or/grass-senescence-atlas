@@ -62,5 +62,7 @@ temp_*
 !01_mapping_and_counting/README.md
 !01_mapping_and_counting/Arabidopsis_Zea_rRNA.fasta
 !01_mapping_and_counting/TruSeq3-SE.fa
+!02_orthology_inference/*.gff.gz
+!02_orthology_inference/*.gff3.gz
 !metadata.txt
 !*.txt  # We'll probably want metadata.txt but maybe not all .txt files.
