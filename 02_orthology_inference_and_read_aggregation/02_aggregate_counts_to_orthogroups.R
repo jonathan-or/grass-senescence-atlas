@@ -15,10 +15,14 @@ library(tidyr)
 library(tibble)
 
 # Load the orthogroups data (OrthoFinder output)
-og_path <- file.path(base_dir, "Orthogroups.tsv") # Default source
+og_path <- file.path(base_dir, "02_orthology_inference_and_read_aggregation", "Orthogroups.tsv.gz")
+if (!file.exists(og_path)) og_path <- file.path(base_dir, "Orthogroups.tsv.gz")
+if (!file.exists(og_path)) og_path <- file.path(base_dir, "Orthogroups.tsv")
+
 if (!file.exists(og_path)) {
-  og_path <- file.path(base_dir, "Orthogroups.tsv")
+  stop("Orthogroups file not found.")
 }
+
 OGs <- read.table(file = og_path,
                    sep = '\t', header = TRUE, quote = '', stringsAsFactors = FALSE)
 
@@ -189,7 +193,7 @@ sapply(summarized_expression_OG, nrow)
 required_orthogroups <- unique(filteredOG$Orthogroup)
 
 # Save the list to a file
-writeLines(required_orthogroups, file.path(base_dir, "02_orthology_inference", "required_orthogroups.txt"))
+writeLines(required_orthogroups, file.path(base_dir, "02_orthology_inference_and_read_aggregation", "required_orthogroups.txt"))
 
 # Step 1: Count the number of species with at least one gene per orthogroup
 species_with_genes <- apply(OGs[, 2:ncol(OGs)], 1, function(x) sum(x != ""))
@@ -205,7 +209,7 @@ cat("Number of orthogroups in partialOGs after removing filteredOG:", nrow(parti
 head(partialOGs)
 
 # Save results to RDS files in the objective directory
-saveRDS(OGs, file = file.path(base_dir, "02_orthology_inference", "OGs.rds"))
-saveRDS(filteredOG, file = file.path(base_dir, "02_orthology_inference", "filteredOG.rds"))
-saveRDS(partialOGs, file = file.path(base_dir, "02_orthology_inference", "partialOGs.rds"))
-saveRDS(summarized_expression_OG, file = file.path(base_dir, "02_orthology_inference", "summarized_expression_OG.rds"))
+saveRDS(OGs, file = file.path(base_dir, "02_orthology_inference_and_read_aggregation", "OGs.rds"))
+saveRDS(filteredOG, file = file.path(base_dir, "02_orthology_inference_and_read_aggregation", "filteredOG.rds"))
+saveRDS(partialOGs, file = file.path(base_dir, "02_orthology_inference_and_read_aggregation", "partialOGs.rds"))
+saveRDS(summarized_expression_OG, file = file.path(base_dir, "02_orthology_inference_and_read_aggregation", "summarized_expression_OG.rds"))

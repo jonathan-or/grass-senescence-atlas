@@ -25,9 +25,9 @@ Following inference, the `Orthogroups.tsv` output was filtered to retain a core 
     - `{species}_summary_statistics.txt`: Output from the mapping pipeline.
 
 ### 4. `02_aggregate_counts_to_orthogroups.R`
-- **Purpose**: Filters the OrthoFinder output (`Orthogroups.tsv`) and aggregates counts from the gene level to the orthogroup level based on the imported count data.
+- **Purpose**: Filters the OrthoFinder output (`Orthogroups.tsv.gz`) and aggregates counts from the gene level to the orthogroup level based on the imported count data.
 - **Expected Inputs in Base Directory**:
-  - `Orthogroups.tsv`: Output from OrthoFinder.
+  - `Orthogroups.tsv.gz`: Output from OrthoFinder.
   - `02_orthology_inference_and_read_aggregation/count_data_frames.rds`: Output from script `01`.
 
 ## Data Structure for Reproducibility
@@ -37,7 +37,7 @@ To successfully run scripts `01` and `02`, a subset or full dataset must be stru
 ```
 [base_dir]/
 ├── metadata.txt
-├── Orthogroups.tsv
+├── Orthogroups.tsv.gz
 ├── Zea_mays/
 │   ├── Zea_mays_counts.txt
 │   └── Zea_mays_summary_statistics.txt
