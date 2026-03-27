@@ -17,10 +17,35 @@ Following inference, the `Orthogroups.tsv` output was filtered to retain a core 
 - **Purpose**: Filters *Zea mays* GFF3 for primary/canonical transcripts.
 
 ### 3. `01_import_counts_and_metadata.R`
-- **Purpose**: Imports raw metadata and gene-level counts from the mapping pipeline. Standardizes species names and cleans transcript IDs. Supports both 2023 (pot-in-pot) and 2024 (remobilization) batches.
+- **Purpose**: Illustrates the processing flow to import raw metadata and gene-level counts from the mapping pipeline. Standardizes species names and cleans transcript IDs.
+- **Expected Inputs in Base Directory**:
+  - `metadata.txt`: Experimental metadata with a `sample_id` column.
+  - `summary_statistics.txt`: Output from mapping pipeline with a `sample_id` column.
+  - Subdirectories for each species containing exactly `{species}_merged_counts.txt` with transcript-level quantifications.
 
 ### 4. `02_aggregate_counts_to_orthogroups.R`
-- **Purpose**: Filters the OrthoFinder output and aggregates counts from the gene level to the orthogroup level based on the imported count data.
+- **Purpose**: Filters the OrthoFinder output (`Orthogroups.tsv`) and aggregates counts from the gene level to the orthogroup level based on the imported count data.
+- **Expected Inputs in Base Directory**:
+  - `Orthogroups.tsv`: Output from OrthoFinder.
+  - `02_orthology_inference_and_read_aggregation/count_data_frames.rds`: Output from script `01`.
+
+## Data Structure for Reproducibility
+
+To successfully run scripts `01` and `02`, a subset or full dataset must be structured as follows:
+
+```
+[base_dir]/
+├── metadata.txt
+├── summary_statistics.txt
+├── Orthogroups.tsv
+├── Zea_mays/
+│   └── Zea_mays_merged_counts.txt
+├── Panicum_virgatum/
+│   └── Panicum_virgatum_merged_counts.txt
+└── ... (other species)
+```
+
+**Note:** For downstream cross-species analysis (Objective 03), pre-processed and normalized 'final' counts and metadata objects will be provided, circumventing the need to manually run these import and aggregation steps unless actively modifying the fundamental mapping pipeline.
 
 ## Data
 
