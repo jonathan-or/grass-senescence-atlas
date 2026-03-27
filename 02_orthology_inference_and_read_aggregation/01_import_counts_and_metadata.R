@@ -3,8 +3,7 @@
 # and gene-level counts outputted by the mapping pipeline.
 # It expects the following input files in the specified base directory:
 #  - metadata.txt
-#  - summary_statistics.txt
-#  - A directory for each species containing a file named '{species}_merged_counts.txt'
+#  - A directory for each species containing '{species}_counts.txt' and '{species}_summary_statistics.txt'
 
 args <- commandArgs(trailingOnly = TRUE)
 base_dir <- if (length(args) > 0) args[1] else getwd()
@@ -12,40 +11,59 @@ base_dir <- if (length(args) > 0) args[1] else getwd()
 library(dplyr)
 library(tidyr)
 
-# 1. Load Metadata and Summary Stats
+# 1. Load Metadata
 metadata_file <- file.path(base_dir, "metadata.txt")
-summary_file <- file.path(base_dir, "summary_statistics.txt")
 
 if (!file.exists(metadata_file)) {
-  stop("Metadata file not found at: ", metadata_file)
+    stop("Metadata file not found at: ", metadata_file)
 }
 metadata <- read.table(metadata_file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-
-if (file.exists(summary_file)) {
-    summary_stats <- read.delim(summary_file, stringsAsFactors = FALSE)
-    metadata <- metadata %>% left_join(summary_stats, by = "sample_id")
-} else {
-    warning("Summary statistics file not found at: ", summary_file, ". Proceeding without it.")
-}
 
 # Remove blank/NA species rows if any
 metadata <- metadata %>% filter(species != "blank" & !is.na(species))
 
-# 2. Import Counts for each species
+# 2. Import Counts and Summary Statistics for each species
 species_list <- unique(metadata$species)
 count_data_frames <- list()
+summary_stats_list <- list()
 
 for (species in species_list) {
-    # Expected format: base_dir/[species]/[species]_merged_counts.txt
-    file_path <- file.path(base_dir, species, paste0(species, "_merged_counts.txt"))
+    # Expected format: base_dir/[species]/[species]_counts.txt
+    count_file <- file.path(base_dir, species, paste0(species, "_counts.txt"))
+    # Fallback for older format if someone uses merged
+    if (!file.exists(count_file)) {
+        count_file <- file.path(base_dir, species, paste0(species, "_merged_counts.txt"))
+    }
     
-    if (file.exists(file_path)) {
+    if (file.exists(count_file)) {
         # Read the count file as a data frame, keeping gene names as row names
-        count_data <- read.delim(file_path, row.names = 1, stringsAsFactors = FALSE)
+        count_data <- read.delim(count_file, row.names = 1, stringsAsFactors = FALSE)
         count_data_frames[[species]] <- count_data
     } else {
-        warning("Count file for ", species, " not found at: ", file_path)
+        warning("Count file for ", species, " not found.")
     }
+
+    # Expected format for summary stats: base_dir/[species]/[species]_summary_statistics.txt
+    summary_file <- file.path(base_dir, species, paste0(species, "_summary_statistics.txt"))
+    # Fallback to a global file if present
+    if (!file.exists(summary_file)) {
+        summary_file <- file.path(base_dir, "summary_statistics.txt")
+    }
+    
+    if (file.exists(summary_file)) {
+        summary_stats_list[[species]] <- read.delim(summary_file, stringsAsFactors = FALSE)
+    } else {
+        warning("Summary statistics file for ", species, " not found.")
+    }
+}
+
+# 3. Merge summary stats with metadata
+if (length(summary_stats_list) > 0) {
+    # Combine all species summary stats into one data frame
+    all_summary_stats <- bind_rows(summary_stats_list) %>% distinct()
+    metadata <- metadata %>% left_join(all_summary_stats, by = "sample_id")
+} else {
+    warning("No summary statistics found. Proceeding without them.")
 }
 
 # Verify imported sample IDs against metadata
@@ -59,13 +77,13 @@ if (length(missing_in_counts) > 0) {
     message("All sample IDs in metadata are present in count data.")
 }
 
-# 3. Clean Gene IDs
+# 4. Clean Gene IDs
 # Zea mays primary transcripts often have suffix "_T0XX" which needs removal for OrthoFinder matching
 if ("Zea_mays" %in% names(count_data_frames)) {
     rownames(count_data_frames$Zea_mays) <- sub("_T0\\d{2}$", "", rownames(count_data_frames$Zea_mays))
 }
 
-# 4. Standardize Species and Accession Names (Optional/Project-specific)
+# 5. Standardize Species and Accession Names (Optional/Project-specific)
 # Example of renaming specific taxa correctly historically
 # (e.g., A. virginicus changed to A. virginicum)
 metadata <- metadata %>%
@@ -85,7 +103,7 @@ if ("Andropogon_virginicus" %in% names(count_data_frames)) {
     names(count_data_frames)[names(count_data_frames) == "Andropogon_virginicus"] <- "Anatherum_virginicum"
 }
 
-# 5. Export for Aggregation
+# 6. Export for Aggregation
 output_dir <- file.path(base_dir, "02_orthology_inference_and_read_aggregation")
 dir.create(output_dir, showWarnings = FALSE)
 

@@ -20,8 +20,9 @@ Following inference, the `Orthogroups.tsv` output was filtered to retain a core 
 - **Purpose**: Illustrates the processing flow to import raw metadata and gene-level counts from the mapping pipeline. Standardizes species names and cleans transcript IDs.
 - **Expected Inputs in Base Directory**:
   - `metadata.txt`: Experimental metadata with a `sample_id` column.
-  - `summary_statistics.txt`: Output from mapping pipeline with a `sample_id` column.
-  - Subdirectories for each species containing exactly `{species}_merged_counts.txt` with transcript-level quantifications.
+  - Subdirectories for each species containing:
+    - `{species}_counts.txt` (or `_merged_counts.txt`): Transcript-level quantifications.
+    - `{species}_summary_statistics.txt`: Output from the mapping pipeline.
 
 ### 4. `02_aggregate_counts_to_orthogroups.R`
 - **Purpose**: Filters the OrthoFinder output (`Orthogroups.tsv`) and aggregates counts from the gene level to the orthogroup level based on the imported count data.
@@ -36,12 +37,13 @@ To successfully run scripts `01` and `02`, a subset or full dataset must be stru
 ```
 [base_dir]/
 ├── metadata.txt
-├── summary_statistics.txt
 ├── Orthogroups.tsv
 ├── Zea_mays/
-│   └── Zea_mays_merged_counts.txt
+│   ├── Zea_mays_counts.txt
+│   └── Zea_mays_summary_statistics.txt
 ├── Panicum_virgatum/
-│   └── Panicum_virgatum_merged_counts.txt
+│   ├── Panicum_virgatum_counts.txt
+│   └── Panicum_virgatum_summary_statistics.txt
 └── ... (other species)
 ```
 
@@ -49,5 +51,5 @@ To successfully run scripts `01` and `02`, a subset or full dataset must be stru
 
 ## Data
 
-- `Msinensis_..._helixer.gff.gz`: Custom Helixer annotation for *Miscanthus sinensis*.
-- `Pvirgatum..._helixer.gff.gz`: Custom Helixer annotation for *Panicum virgatum*.
+- `Msinensis_..._helixer.gff.gz`: Helixer annotation for *Miscanthus sinensis*.
+- `Pvirgatum..._helixer.gff.gz`: Helixer annotation for *Panicum virgatum*.
