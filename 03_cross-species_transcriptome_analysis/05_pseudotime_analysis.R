@@ -157,6 +157,10 @@ if (!is.null(go_neg_res$lollipop_plot)) {
 
 cat("Evaluating Positive Modulation (Senescence shift)...\n")
 go_pos_res <- perform_and_plot_GO_OG(top_ogs_vector, gmt_bp_df, gmt_mf_df, gmt_cc_df, gmt_data_df, file.path(out_dir, "leaf_pos_OG_GO_enrichment.txt"))
+if (!is.null(go_pos_res$lollipop_plot)) {
+  lp_pos_plot <- go_pos_res$lollipop_plot + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + theme_classic(base_size = 14)
+  ggsave(file.path(out_dir, "GO_pos_modulation_OG.tiff"), lp_pos_plot, width = 7.5, height = 3.6, units = "in", dpi = 600, compression = "lzw")
+}
 if (!is.null(go_pos_res$miniplot)) {
   ggsave(file.path(out_dir, "GO_pos_modulation_small_OG.tiff"), go_pos_res$miniplot, width = 1, height = 3, units = "in", dpi = 600, compression = "lzw")
 }
