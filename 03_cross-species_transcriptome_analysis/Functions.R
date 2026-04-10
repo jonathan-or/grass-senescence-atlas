@@ -1,0 +1,364 @@
+# Functions.R
+# Core functions for PCA, UMAP, and GO Enrichment used across the analytical scripts.
+
+# ==========================================
+# 1. Dimension Reduction Functions
+# ==========================================
+
+plot_pca_ggplot2 <- function(count_data, metadata, color_by, species_palette = NULL, accession_palette = NULL, x_pc = 1, y_pc = 2) {
+  library(DESeq2)
+  library(ggplot2)
+  library(dplyr)
+  
+  # Ensure count data columns match metadata sample IDs
+  metadata <- metadata %>% filter(sample_id %in% colnames(count_data))
+  count_data <- count_data[, metadata$sample_id, drop = FALSE]
+  
+  # Check for dimension mismatch
+  if (ncol(count_data) != nrow(metadata)) {
+    stop("Mismatch between count_data columns and metadata rows after filtering.")
+  }
+  
+  # Ensure metadata order matches count_data columns
+  metadata <- metadata[match(colnames(count_data), metadata$sample_id), ]
+
+  # Create DESeqDataSet and normalize
+  dds <- DESeqDataSetFromMatrix(countData = count_data, colData = metadata, design = ~ 1)
+  dds <- estimateSizeFactors(dds)
+
+  # Filter out low-expressed genes
+  dds <- dds[rowSums(counts(dds, normalized = TRUE)) > 0, ] 
+
+  # Perform variance stabilizing transformation
+  vst_data <- vst(dds, blind = TRUE)
+  vst_mat <- assay(vst_data)
+
+  n_genes_used <- nrow(vst_mat)
+  message("Number of genes used in PCA analysis: ", n_genes_used)
+
+  # Perform PCA
+  pca_res <- prcomp(t(vst_mat))
+  
+  # Prepare PCA data frame with metadata
+  pca_df <- as.data.frame(pca_res$x)
+  pca_df$sample_id <- rownames(pca_df)
+  pca_df <- left_join(pca_df, metadata, by = "sample_id")
+  
+  # Validate x_pc and y_pc inputs
+  num_pcs <- ncol(pca_df) - 1
+  if (x_pc > num_pcs | y_pc > num_pcs) {
+    stop("Requested PCA components exceed available components.")
+  }
+  
+  # Get variance explained
+  variance_explained <- round(100 * (pca_res$sdev^2 / sum(pca_res$sdev^2)), 2)
+  x_pc_var <- variance_explained[x_pc]
+  y_pc_var <- variance_explained[y_pc]
+  
+  x_pc_col <- paste0("PC", x_pc)
+  y_pc_col <- paste0("PC", y_pc)
+  
+  # Color scaling
+  if (is.numeric(pca_df[[color_by]])) {
+    color_scale <- scale_color_gradientn(colors = c("#ff991c", "#b200d5","#490057"))
+  } else {
+    unique_values <- unique(pca_df[[color_by]])
+    if (color_by == "species" && !is.null(species_palette)) {
+      color_scale <- scale_color_manual(values = species_palette)
+    } else if (color_by == "accession" && !is.null(accession_palette)) {
+      color_scale <- scale_color_manual(values = accession_palette)
+    } else {
+      color_palette <- RColorBrewer::brewer.pal(min(length(unique_values), 8), "Set2")
+      color_scale <- scale_color_manual(values = setNames(color_palette, unique_values))
+    }
+  }
+  
+  # Plot
+  pca_plot <- ggplot(pca_df, aes_string(x = x_pc_col, y = y_pc_col, color = color_by)) +
+    geom_point(size = 0.8, alpha = 0.8) +
+    labs(
+      title = paste("PCA of VST Transformed Counts colored by", color_by),
+      x = paste(x_pc_col, "-", x_pc_var, "% variance"),
+      y = paste(y_pc_col, "-", y_pc_var, "% variance")
+    ) +
+    color_scale +
+    theme_classic(base_size = 10) +
+    theme(
+      legend.position = "right",
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA)
+    )
+
+  attr(pca_plot, "n_genes_used") <- n_genes_used
+  
+  return(list(
+    pca_plot = pca_plot,
+    vst_matrix = vst_mat,
+    pca_df = pca_df,
+    variance_explained = variance_explained,
+    n_genes_used = n_genes_used
+  ))
+}
+
+run_umap_seurat_style <- function(count_data,
+                                  metadata,
+                                  color_by,
+                                  species_palette = NULL,
+                                  accession_palette = NULL,
+                                  n_top_genes = 2000,
+                                  scale_max = 10,
+                                  n_pcs = 10,
+                                  umap_n_neighbors = 50,
+                                  umap_min_dist = 0.4,
+                                  umap_metric = "cosine",
+                                  spread = 0.5,
+                                  seed = 14) {
+  library(DESeq2)
+  library(matrixStats)
+  library(dplyr)
+  library(ggplot2)
+  library(RColorBrewer)
+  library(uwot)
+
+  set.seed(seed)
+
+  metadata <- metadata %>% filter(sample_id %in% colnames(count_data))
+  count_data <- count_data[, metadata$sample_id, drop = FALSE]
+  metadata <- metadata[match(colnames(count_data), metadata$sample_id), ]
+
+  dds <- DESeqDataSetFromMatrix(countData = count_data, colData = metadata, design = ~ 1)
+  dds <- estimateSizeFactors(dds)
+  dds <- dds[rowSums(counts(dds, normalized = TRUE)) > 0, ]
+  vst_data <- vst(dds, blind = TRUE)
+  vst_mat <- assay(vst_data)
+
+  gene_vars <- rowVars(vst_mat)
+  gene_order <- sort(gene_vars, decreasing = TRUE)
+  top_genes <- names(gene_order)[1:n_top_genes]
+  vst_top <- vst_mat[top_genes, ]
+
+  gene_elbow_df <- data.frame(Rank = seq_along(gene_order), Variance = gene_order)
+  gene_elbow_plot <- ggplot(gene_elbow_df, aes(x = Rank, y = Variance)) +
+    geom_line() +
+    geom_vline(xintercept = n_top_genes, color = "red", linetype = "dashed") +
+    labs(title = "Elbow Plot of Gene Variance", x = "Gene Rank", y = "Variance") +
+    theme_minimal()
+
+  scaled_top <- t(scale(t(vst_top)))
+  scaled_top[scaled_top > scale_max] <- scale_max
+  scaled_top[scaled_top < -scale_max] <- -scale_max
+
+  pca_res <- prcomp(t(scaled_top))
+  pcs_mat <- pca_res$x[, 1:n_pcs]
+  pc_var <- pca_res$sdev^2
+  pc_var_explained <- pc_var / sum(pc_var) * 100
+
+  max_pc_plot <- min(length(pc_var), 50)
+  pc_elbow_df <- data.frame(PC = 1:max_pc_plot, Variance = pc_var_explained[1:max_pc_plot])
+  pc_elbow_plot <- ggplot(pc_elbow_df, aes(x = PC, y = Variance)) +
+    geom_line() +
+    geom_vline(xintercept = n_pcs, color = "red", linetype = "dashed") +
+    labs(title = "Elbow Plot of Principal Components", x = "PC", y = "Variance Explained (%)") +
+    theme_minimal()
+
+  umap_res <- umap(pcs_mat, n_neighbors = umap_n_neighbors, min_dist = umap_min_dist,
+                   metric = umap_metric, spread = spread)
+  umap_df <- as.data.frame(umap_res)
+  colnames(umap_df) <- c("UMAP1", "UMAP2")
+  umap_df$sample_id <- rownames(pcs_mat)
+  umap_df <- left_join(umap_df, metadata, by = "sample_id")
+
+  if (is.numeric(umap_df[[color_by]])) {
+    color_scale <- scale_color_gradientn(colors = c("#ff991c", "#b200d5", "#490057"))
+  } else {
+    unique_values <- unique(umap_df[[color_by]])
+    if (color_by == "species" && !is.null(species_palette)) {
+      color_scale <- scale_color_manual(values = species_palette)
+    } else if (color_by == "accession" && !is.null(accession_palette)) {
+      color_scale <- scale_color_manual(values = accession_palette)
+    } else {
+      color_palette <- RColorBrewer::brewer.pal(min(length(unique_values), 8), "Set2")
+      color_scale <- scale_color_manual(values = setNames(color_palette, unique_values))
+    }
+  }
+
+  umap_plot <- ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = .data[[color_by]])) +
+    geom_point(size = 0.025, alpha = 0.8) +
+    color_scale +
+    coord_fixed() +
+    theme_classic(base_size = 10) +
+    labs(
+      title = paste("Seurat-style UMAP (Top", n_top_genes, "genes, PC", n_pcs, ")"),
+      x = "UMAP1", y = "UMAP2"
+    )
+
+  return(list(
+    umap_plot = umap_plot,
+    gene_elbow_plot = gene_elbow_plot,
+    pc_elbow_plot = pc_elbow_plot,
+    vst_matrix = vst_mat,
+    vst_top = vst_top,
+    scaled_matrix = scaled_top,
+    pca_matrix = pcs_mat,
+    umap_df = umap_df
+  ))
+}
+
+# ==========================================
+# 2. GO Enrichment Functions
+# ==========================================
+
+perform_GO_enrichment_OG <- function(og_vector, gmt_bp_df, gmt_mf_df, gmt_cc_df, gmt_data_df) {
+  library(clusterProfiler)
+  
+  if (!is.character(og_vector)) {
+    stop("Input OGs must be a character vector")
+  }
+  
+  perform_enrichment <- function(og_vector, gmt_df, ontology_label, gmt_data_df) {
+    enrichment_results <- enricher(og_vector, TERM2GENE = gmt_df, pAdjustMethod = "BH")
+    if (is.null(enrichment_results) || nrow(enrichment_results@result) == 0) {
+      return(data.frame())
+    }
+    enrichment_results_with_desc <- merge(enrichment_results@result, gmt_data_df, 
+                                          by.x = "ID", by.y = "goid", all.x = TRUE)
+    enrichment_results_with_desc$Ontology <- ontology_label
+    return(enrichment_results_with_desc)
+  }
+  
+  bp_results <- perform_enrichment(og_vector, gmt_bp_df, "BP", gmt_data_df)
+  mf_results <- perform_enrichment(og_vector, gmt_mf_df, "MF", gmt_data_df)
+  cc_results <- perform_enrichment(og_vector, gmt_cc_df, "CC", gmt_data_df)
+  
+  go_results <- rbind(bp_results, mf_results, cc_results)
+  if (!is.null(go_results) && nrow(go_results) > 0) {
+    go_results$p.adjust <- p.adjust(go_results$pvalue, method = "BH")
+  }
+  return(go_results)
+}
+
+perform_and_plot_GO_OG <- function(og_vector, gmt_bp_df, gmt_mf_df, gmt_cc_df, gmt_data_df, output_txt) {
+  library(ggplot2)
+  library(dplyr)
+  
+  go_results <- perform_GO_enrichment_OG(og_vector, gmt_bp_df, gmt_mf_df, gmt_cc_df, gmt_data_df)
+  
+  if (nrow(go_results) > 0) {
+    write.table(go_results, file = output_txt, sep = "\t", row.names = FALSE, quote = FALSE)
+    cat("GO enrichment results saved to:", output_txt, "\n")
+  }
+  
+  if (nrow(go_results) == 0) return(list(go_results = go_results, lollipop_plot = NULL, miniplot = NULL))
+  
+  go_data <- go_results %>%
+    mutate(
+      p.adjust = as.numeric(p.adjust),
+      logP = -log10(p.adjust),
+      short_desc = sapply(strsplit(desc, " "), function(x) paste(head(x, 6), collapse = " ")),
+      label = paste0(short_desc, " (", ID, ")")
+    ) %>%
+    filter(!is.na(logP) & is.finite(logP))
+
+  top_by_ontology <- go_data %>%
+    group_by(Ontology) %>%
+    slice_max(order_by = logP, n = 6) %>%
+    ungroup() %>%
+    mutate(highlight = TRUE)
+
+  go_data <- go_data %>%
+    mutate(
+      highlight = ifelse(ID %in% top_by_ontology$ID, "highlight", 
+                         ifelse(p.adjust < 0.05, "pale", "nonsignificant"))
+    )
+  
+  ontology_colors <- c("BP" = "orange", "MF" = "brown1", "CC" = "#00bfc4")
+  
+  p_lollipop <- ggplot(top_by_ontology, aes(x = logP, y = reorder(label, logP), color = Ontology)) +
+    geom_segment(aes(xend = 0, yend = label), size = 0.8) +
+    geom_point(aes(size = Count), alpha = 0.8) +
+    scale_size_continuous(trans = "identity", breaks = pretty(top_by_ontology$Count, n = 5)) + 
+    scale_color_manual(values = ontology_colors) + 
+    geom_vline(xintercept = -log10(0.05), linetype = "dashed", color = "darkslategray") +
+    labs(x = "-log10(Adjusted p-value)", y = "GO Term (Description + GO ID)", size = "OG Count", color = "Ontology") +
+    theme_classic() +
+    theme(
+      axis.text.y = element_text(size = 8),  
+      axis.title.x = element_text(size = 8),
+      legend.position = "right",
+      legend.text = element_text(size = 8),  
+      legend.title = element_text(size = 8),
+      plot.margin = margin(5, 5, 5, 5)
+    )
+  
+  pale_colors <- c("BP" = "#FFD9B3", "MF" = "#E8B2B2", "CC" = "#AEECEF")
+  highlight_colors <- ontology_colors  
+  nonsignificant_color <- "gray80"  
+
+  go_data$color <- ifelse(go_data$highlight == "highlight", highlight_colors[go_data$Ontology], 
+                          ifelse(go_data$highlight == "pale", pale_colors[go_data$Ontology], 
+                                 nonsignificant_color))
+
+  p_bubble <- ggplot(go_data, aes(x = logP, y = reorder(label, logP), color = color)) +
+    geom_point(alpha = 0.8, size = 1) +  
+    scale_color_identity() +  
+    facet_wrap(~Ontology, scales = "free_y", ncol = 1) +  
+    geom_vline(xintercept = -log10(0.05), linetype = "dashed", color = "darkslategrey", linewidth = 0.8) +  
+    scale_x_continuous(limits = c(0, max(go_data$logP, na.rm = TRUE) * 1.1)) +  
+    labs(x = "-log10(Adjusted p-value)", y = NULL) +
+    theme_classic() +
+    theme(
+        strip.text = element_text(size = 8, face = "bold"),  
+        axis.text.y = element_blank(),  
+        axis.title.y = element_blank(),  
+        axis.ticks.y = element_blank(),  
+        axis.text.x = element_text(size = 8),  
+        legend.position = "none",
+        plot.margin = margin(5, 5, 5, 5)
+      )
+
+  return(list(go_results = go_results, lollipop_plot = p_lollipop, miniplot = p_bubble))
+}
+
+perform_GO_enrichment_OG_specific_universe <- function(og_vector, gmt_bp_df, gmt_mf_df, gmt_cc_df, gmt_data_df, universe_ogs, minGS = 5, maxGS = 2000, pAdjustMethod = "BH") {
+  library(clusterProfiler)
+  
+  stopifnot(is.character(og_vector))
+  og_vector <- intersect(og_vector, universe_ogs)
+  if (length(og_vector) < minGS) return(data.frame())
+
+  perform_enrichment <- function(og_vec, gmt_df, ontology_label) {
+    gmt_df_u <- gmt_df %>%
+      dplyr::filter(gene %in% universe_ogs) %>%
+      dplyr::distinct(term, gene)
+
+    if (nrow(gmt_df_u) == 0) return(data.frame())
+
+    res <- clusterProfiler::enricher(
+      gene          = og_vec,
+      TERM2GENE     = gmt_df_u,
+      universe      = universe_ogs,
+      pAdjustMethod = pAdjustMethod,
+      minGSSize     = minGS,
+      maxGSSize     = maxGS
+    )
+    if (is.null(res) || nrow(res@result) == 0) return(data.frame())
+
+    out <- res@result
+    out <- out %>%
+      dplyr::left_join(gmt_data_df %>% dplyr::select(goid = goid, desc),
+                       by = c("ID" = "goid")) %>%
+      dplyr::mutate(
+        Ontology   = ontology_label,
+        logP       = -log10(p.adjust)
+      )
+    out
+  }
+
+  bp_results <- perform_enrichment(og_vector, gmt_bp_df, "BP")
+  mf_results <- perform_enrichment(og_vector, gmt_mf_df, "MF")
+  cc_results <- perform_enrichment(og_vector, gmt_cc_df, "CC")
+
+  go_results <- dplyr::bind_rows(bp_results, mf_results, cc_results)
+  if (nrow(go_results)) go_results$p.adjust <- p.adjust(go_results$pvalue, method = pAdjustMethod)
+  go_results
+}
