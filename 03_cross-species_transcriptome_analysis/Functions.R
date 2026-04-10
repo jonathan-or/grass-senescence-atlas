@@ -315,7 +315,74 @@ export_pca_plot <- function(pca_object, filename, point_size = 1.5, point_alpha 
 }
 
 # ==========================================
-# 3. GO Enrichment Functions
+# 3. Photo Index Functions
+# ==========================================
+
+calculate_photo_hog_proportion <- function(hog_counts, photo_hogs, metadata) {
+  library(DESeq2)
+  library(dplyr)
+  
+  photo_hogs <- intersect(photo_hogs, rownames(hog_counts))
+
+  dds <- DESeqDataSetFromMatrix(countData = hog_counts, colData = metadata, design = ~ 1)
+  dds <- estimateSizeFactors(dds)
+  normalized_counts <- counts(dds, normalized = TRUE)
+
+  total_counts <- colSums(normalized_counts)
+  normalized_photo_hog_counts <- normalized_counts[photo_hogs, , drop = FALSE]
+  photo_hog_sums <- colSums(normalized_photo_hog_counts)
+
+  photo_percent_counts <- (photo_hog_sums / total_counts) * 100
+
+  lower_bound <- quantile(photo_percent_counts, 0.05, na.rm = TRUE)
+  upper_bound <- quantile(photo_percent_counts, 0.95, na.rm = TRUE)
+
+  photo_percent_df <- data.frame(
+    sample_id = colnames(hog_counts),
+    photo_percent_counts = photo_percent_counts
+  ) %>%
+    mutate(ps_index = (photo_percent_counts - lower_bound) / (upper_bound - lower_bound)) %>%
+    mutate(ps_index = pmin(pmax(ps_index, 0), 1))
+
+  attr(photo_percent_df, "photo_hogs_used") <- photo_hogs
+  attr(photo_percent_df, "n_photo_hogs_used") <- length(photo_hogs)
+  attr(photo_percent_df, "n_total_ogs") <- nrow(hog_counts)
+
+  return(photo_percent_df)
+}
+
+generate_ps_gdd_plot <- function(df, target_season, week_limits, week_breaks) {
+  library(ggplot2)
+  library(dplyr)
+  
+  scale_fact <- 100 
+  season_df <- df %>% filter(season == target_season)
+  
+  ggplot(season_df, aes(x = week)) +
+    geom_jitter(aes(y = ps_index), color = "green4", alpha = 0.3, width = 0.25, size = 0.8, stroke = 0.3) +
+    stat_summary(aes(y = ps_index, group = 1), fun = mean, geom = "line", color = "green4", linewidth = 1) +
+    stat_summary(aes(y = weekly_gdd_pulse / scale_fact, group = 1), fun = mean, geom = "line", color = "#8B4513", linewidth = 1) +
+    stat_summary(aes(y = ps_index), fun = mean, geom = "point", shape = 21, color = "black", fill = "green3", size = 2.5, stroke = 0.8) +
+    stat_summary(aes(y = weekly_gdd_pulse / scale_fact), fun = mean, geom = "point", shape = 21, color = "black", fill = "#d95f02", size = 2.5, stroke = 0.8) +
+    scale_y_continuous(
+      name = "photosynthetic index",
+      limits = c(0, 1.1),
+      breaks = seq(0, 1, 0.2),
+      sec.axis = sec_axis(~ . * scale_fact, name = expression(paste("accumulated weekly GDDs (°C)")), breaks = seq(0, 100, by = 25))
+    ) +
+    scale_x_continuous(limits = week_limits, breaks = week_breaks) +
+    theme_classic(base_size = 10) +
+    theme(
+      axis.title.y.left = element_text(color = "black"),
+      axis.title.y.right = element_text(color = "black"),
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      plot.title = element_text(face = "bold.italic")
+    ) +
+    labs(x = "week")
+}
+
+# ==========================================
+# 4. GO Enrichment Functions
 # ==========================================
 
 perform_GO_enrichment_OG <- function(og_vector, gmt_bp_df, gmt_mf_df, gmt_cc_df, gmt_data_df) {
