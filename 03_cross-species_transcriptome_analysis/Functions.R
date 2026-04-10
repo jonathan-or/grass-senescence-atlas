@@ -205,7 +205,117 @@ run_umap_seurat_style <- function(count_data,
 }
 
 # ==========================================
-# 2. GO Enrichment Functions
+# 2. Pseudotime & Marker Gene Functions
+# ==========================================
+
+calculate_pseudotime <- function(count_data, metadata, covariate, elbo_tol = 0.00001) {
+  library(DESeq2)
+  library(phenopath)
+  
+  # Ensure sample IDs match
+  count_data <- count_data[, metadata$sample_id, drop = FALSE]
+  
+  dds <- DESeqDataSetFromMatrix(countData = count_data, colData = metadata, design = ~ 1)
+  dds <- estimateSizeFactors(dds)
+  
+  min_libs <- ceiling(0.10 * ncol(dds))
+  keep <- rowSums(counts(dds, normalized = TRUE) > 0) >= min_libs
+  dds <- dds[keep, ]
+  cat("Keeping", sum(keep), "genes expressed in at least", min_libs, "libraries\n")
+  
+  vst_data <- vst(dds, blind = TRUE)
+  vst_mat <- assay(vst_data)
+  
+  vst_mat_transposed <- t(vst_mat)
+  gene_variances <- apply(vst_mat_transposed, 2, var)
+  zero_var_genes <- colnames(vst_mat_transposed)[gene_variances == 0]
+  if(length(zero_var_genes) > 0) {
+    cat("Removing", length(zero_var_genes), "genes with zero variance.\n")
+    vst_mat_transposed <- vst_mat_transposed[, gene_variances > 0]
+  }
+  
+  metadata[[covariate]] <- as.factor(metadata[[covariate]])
+  
+  fit <- phenopath(vst_mat_transposed, metadata[[covariate]], z_init = 1, elbo_tol = elbo_tol)
+  pseudotime <- trajectory(fit)
+  pseudotime_df <- data.frame(SampleID = rownames(vst_mat_transposed), Pseudotime = pseudotime)
+  
+  return(list(
+    pseudotime_df = pseudotime_df,
+    fit = fit,
+    zero_var_genes = zero_var_genes,
+    vst_matrix = rbind(vst_mat_transposed, matrix(NA, nrow=0, ncol=ncol(vst_mat_transposed))) # Not used but available
+  ))
+}
+
+plot_pca_colored_by_gene <- function(gene_id, count_matrix, metadata, x_pc = 1, y_pc = 2) {
+  library(DESeq2)
+  library(ggplot2)
+  library(dplyr)
+
+  metadata <- metadata %>% filter(sample_id %in% colnames(count_matrix))
+  count_matrix <- count_matrix[, metadata$sample_id, drop = FALSE]
+  metadata <- metadata[match(colnames(count_matrix), metadata$sample_id), ]
+
+  dds <- DESeqDataSetFromMatrix(countData = count_matrix, colData = metadata, design = ~1)
+  dds <- estimateSizeFactors(dds)
+  dds <- dds[rowSums(counts(dds, normalized = TRUE)) > 0, ]
+
+  vst_data <- vst(dds, blind = TRUE)
+  vst_mat <- assay(vst_data)
+
+  if (!gene_id %in% rownames(vst_mat)) {
+    stop(paste("Gene", gene_id, "not found in vst matrix"))
+  }
+
+  pca_res <- prcomp(t(vst_mat))
+  pca_df <- as.data.frame(pca_res$x)
+  pca_df$sample_id <- rownames(pca_df)
+  pca_df <- left_join(pca_df, metadata, by = "sample_id")
+
+  expr_vals <- vst_mat[gene_id, pca_df$sample_id]
+  scaled_expr <- scale(expr_vals)
+  scaled_expr[scaled_expr > 3] <- 3
+  scaled_expr[scaled_expr < -3] <- -3
+  pca_df$expression <- as.numeric(scaled_expr)
+
+  var_exp <- round(100 * (pca_res$sdev^2 / sum(pca_res$sdev^2)), 2)
+  x_lab <- paste0("PC", x_pc, " (", var_exp[x_pc], "% variance)")
+  y_lab <- paste0("PC", y_pc, " (", var_exp[y_pc], "% variance)")
+
+  custom_colors <- rev(c("#7e203a", "#ca1875", "#ef2c69", "#f06848", "#fda25e", "#fceba5", "#f2f8d5", "#e4f2f8"))
+  color_scale <- scale_color_gradientn(colors = custom_colors, limits = c(-3, 3))
+
+  ggplot(pca_df, aes_string(x = paste0("PC", x_pc), y = paste0("PC", y_pc), color = "expression")) +
+    geom_point(size = 0.8, alpha = 0.9) +
+    color_scale +
+    theme_classic(base_size = 10) +
+    labs(title = paste("PCA colored by", gene_id, "expression (z-scored)"), x = x_lab, y = y_lab, color = "Z-score")
+}
+
+export_pca_plot <- function(pca_object, filename, point_size = 1.5, point_alpha = 0.9, shape = 19, base_size = 8, width = 2, height = 2, dpi = 600, compression = "lzw") {
+  library(ggplot2)
+  pca_object$layers <- pca_object$layers[!sapply(pca_object$layers, function(layer) inherits(layer$geom, "GeomPoint"))]
+
+  pca_object <- pca_object +
+    geom_point(size = point_size, alpha = point_alpha, shape = shape, stroke = 0) +
+    theme_classic(base_size = base_size) +
+    theme(
+      plot.title = element_blank(),
+      axis.title = element_blank(),
+      axis.text.y = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.ticks.y = element_blank(),
+      legend.position = "none"
+    )
+  print(pca_object)
+  ggsave(filename = filename, plot = pca_object, width = width, height = height, units = "in", dpi = dpi, compression = compression)
+  return(pca_object)
+}
+
+# ==========================================
+# 3. GO Enrichment Functions
 # ==========================================
 
 perform_GO_enrichment_OG <- function(og_vector, gmt_bp_df, gmt_mf_df, gmt_cc_df, gmt_data_df) {
