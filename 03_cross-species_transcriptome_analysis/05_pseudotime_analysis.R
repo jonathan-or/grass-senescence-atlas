@@ -166,3 +166,30 @@ if (!is.null(go_pos_res$miniplot)) {
 }
 
 cat("Pseudotime and Trajectory Assessment Modeling Complete.\n")
+
+cat("Identifying the core photosynthetic orthogroup set for downstream index calculations...\n")
+photo_go_terms <- c(
+  "GO:0009535", "GO:0015979", "GO:0009523", "GO:0009522", "GO:0009765",
+  "GO:0055035", "GO:0009941", "GO:0010287", "GO:0016168",
+  "GO:0009416", "GO:0009654", "GO:0018298", "GO:0009532", "GO:0019904",
+  "GO:0019253", "GO:0022900", "GO:0010207", "GO:0009773", "GO:0010598",
+  "GO:0015995", "GO:0009570", "GO:0031977", "GO:0006094", "GO:0030388",
+  "GO:0010206", "GO:0042170", "GO:0045156", "GO:0010319",
+  "GO:0009579", "GO:0009644", "GO:0010196", "GO:0016620", "GO:0009534",
+  "GO:0050661", "GO:0031969", "GO:0009658", "GO:0009642", "GO:0009543",
+  "GO:0051537", "GO:0051536", "GO:0042651", "GO:0009055","GO:0015977"
+)
+neg_go_res <- read.table(file.path(out_dir, "leaf_neg_OG_GO_enrichment.txt"), header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+photo_go_results <- neg_go_res %>%
+  filter(ID %in% photo_go_terms) %>%
+  pull(geneID)
+
+photo_og_vector <- unique(unlist(strsplit(photo_go_results, "/")))
+saveRDS(photo_og_vector, file.path(in_dir, "photo_ogs.rds"))
+
+# Map to Zm ids
+gene_og_map <- readRDS(file.path(in_dir, "gene_og_mapping.rds"))
+zm_photo_map <- gene_og_map %>% 
+  filter(Orthogroup %in% photo_og_vector & grepl("^Zm", GeneID))
+write.table(zm_photo_map, file.path(in_dir, "photo_ogs_Zm.txt"), sep="\t", quote=FALSE, row.names=FALSE)
+cat("Exported photo_ogs.rds and photo_ogs_Zm.txt to data directory.\n")

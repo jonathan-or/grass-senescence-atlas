@@ -17,29 +17,10 @@ library(lubridate)
 library(DESeq2)
 
 # --- 1. Identify 115 Photosynthetic Associated OGs --- #
-cat("Identifying the core photosynthetic orthogroup set...\n")
-photo_go_terms <- c(
-  "GO:0009535", "GO:0015979", "GO:0009523", "GO:0009522", "GO:0009765",
-  "GO:0055035", "GO:0009941", "GO:0010287", "GO:0016168",
-  "GO:0009416", "GO:0009654", "GO:0018298", "GO:0009532", "GO:0019904",
-  "GO:0019253", "GO:0022900", "GO:0010207", "GO:0009773", "GO:0010598",
-  "GO:0015995", "GO:0009570", "GO:0031977", "GO:0006094", "GO:0030388",
-  "GO:0010206", "GO:0042170", "GO:0045156", "GO:0010319",
-  "GO:0009579", "GO:0009644", "GO:0010196", "GO:0016620", "GO:0009534",
-  "GO:0050661", "GO:0031969", "GO:0009658", "GO:0009642", "GO:0009543",
-  "GO:0051537", "GO:0051536", "GO:0042651", "GO:0009055","GO:0015977"
-)
-
-# Load the negative enrichment results from pseudotime modeling
-neg_go_res <- read.table(file.path(plot_dir, "leaf_neg_OG_GO_enrichment.txt"), header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-
-# Filter for the target photosynthesis GO IDs and extract matching genes
-photo_go_results <- neg_go_res %>%
-  filter(ID %in% photo_go_terms) %>%
-  pull(geneID)
-
-photo_og_vector <- unique(unlist(strsplit(photo_go_results, "/")))
+cat("Loading the core photosynthetic orthogroup set...\n")
+photo_og_vector <- readRDS(file.path(in_dir, "photo_ogs.rds"))
 cat("Number of unique photosynthesis-associated orthogroups identified:", length(photo_og_vector), "\n")
+
 
 # --- 2. Calculate ps_index for leaf libraries --- #
 cat("Loading matrices and calculating ps_index scaling...\n")
