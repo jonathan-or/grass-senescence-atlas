@@ -2,6 +2,39 @@
 # Core functions for PCA, UMAP, and GO Enrichment used across the analytical scripts.
 
 # ==========================================
+# 0. Global Palettes
+# ==========================================
+
+species_palette <- c(
+  "Anatherum_virginicum"     = "#1F77B4", "Andropogon_gerardii"      = "#FF7F0E",
+  "Bothriochloa_laguroides"  = "#2CA02C", "Chrysopogon_zizanioides"  = "#D62728",
+  "Elionorus_tripsacoides"   = "#9467BD", "Miscanthus_giganteus"     = "#8C564B",
+  "Panicum_virgatum"         = "#98DF8A", "Schizachyrium_scoparium"  = "#E377C2",
+  "Sorghastrum_nutans"       = "#7F7F7F", "Sorghum_bicolor"          = "#FF9896",
+  "Themeda_triandra"         = "#E6AB02", "Tripsacum_dactyloides"    = "#17BECF",
+  "Zea_diploperennis"        = "#BCBD22", "Zea_mays"                 = "#36eb11"
+)
+
+accession_palette <- c(
+  "Anatherum_virginicum"     = "#1F77B4", "Andropogon_gerardii"      = "#FF7F0E",
+  "Ag_Niagara"               = "#A6CEE3", "Bothriochloa_laguroides"  = "#2CA02C",
+  "Chrysopogon_zizanioides"  = "#D62728", "Elionorus_tripsacoides"   = "#9467BD",
+  "Miscanthus_giganteus"     = "#8C564B", "Panicum_virgatum_A1"      = "#98DF8A",
+  "Panicum_virgatum_Kanlow"  = "#2CA02C", "Pv_Liberty"               = "#f69400",
+  "Schizachyrium_scoparium"  = "#E377C2", "Sorghastrum_nutans"       = "#7F7F7F",
+  "Sn_WI"                    = "#993404", "Sorghum_bicolor"          = "#FF9896",
+  "Sb_BTx623"                = "#67000D", "Ss_Ahring"                = "#B3DE69",
+  "Td_floridanum"            = "#B2DF8A", "Td_IL"                    = "#66C2A5",
+  "Td_KS_B6"                 = "#1F78B4", "Td_KS_C9"                 = "#6A3D9A",
+  "Td_McKain"                = "#A6CEE3", "Td_MO"                    = "#B2E2E2",
+  "Td_OK"                    = "#63A3CB", "Td_Pete"                  = "#0ad2e4",
+  "Td_TX"                    = "#084081", "Td_Iuka"                  = "#0f93e4",
+  "Td_Texas_Sue"             = "#0cc688", "Themeda_triandra"         = "#E6AB02",
+  "Zea_diploperennis"        = "#BCBD22", "Zd_momo"                  = "#006D2C",
+  "Zm_lh244"                 = "#36eb11", "Zm_lh287Xlh244"           = "#77e204"
+)
+
+# ==========================================
 # 1. Dimension Reduction Functions
 # ==========================================
 

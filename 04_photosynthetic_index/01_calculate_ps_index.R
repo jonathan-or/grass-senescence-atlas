@@ -47,6 +47,9 @@ leaf_metadata_ps <- leaf_metadata %>%
   arrange(julian_days) %>%
   mutate(sample_id = factor(sample_id, levels = sample_id)) # Lock factor ordering
 
+# Save the derived ps_index metadata for downstream modules
+saveRDS(leaf_metadata_ps, file.path(in_dir, "leaf_metadata_ps_index.rds"))
+
 # Produce Figure 2D (Photosynthesis Index spanning pseudotime)
 photo_ogs_plot <- ggplot(leaf_metadata_ps, aes(x = Pseudotime, y = photo_percent_counts, color = julian_days)) +
   geom_point(size = 1.2, alpha = 0.8, color="black", fill="green", shape=21) +
