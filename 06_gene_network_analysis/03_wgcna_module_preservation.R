@@ -142,11 +142,16 @@ net_leaf  <- readRDS(file.path(data_dir, "net_leaf.rds"))
 DatExpr_leaf <- readRDS(file.path(data_dir, "DatExpr_leaf.rds"))
 vst_leaf  <- readRDS(file.path(ps_dir, "leaf_og_counts_dps.rds")) # Or from PCA object if available
 
-# Reconstruct modules table
-modules_leaf <- table(labels2colors(net_leaf$colors)) %>% as.data.frame() %>%
-  rename(module_color = Var1, module_size = Freq) %>%
-  mutate(module_num = as.numeric(factor(module_color, levels = setdiff(unique(module_color), "grey"))),
-         module_label = paste0("m", module_num, "_", module_color))
+# Define modules_leaf correctly BEFORE using it
+modules_leaf <- data.frame(
+  module_num = net_leaf$colors,
+  module_color = labels2colors(net_leaf$colors)
+) %>% 
+  group_by(module_num, module_color) %>%
+  summarise(module_size = n(), .groups = "drop") %>%
+  filter(module_num != 0) %>%
+  arrange(module_num) %>%
+  mutate(module_label = paste0("m", module_num, "_", module_color))
 
 pres_leaf_path <- file.path(data_dir, "pres_list_leaf.rds")
 if (file.exists(pres_leaf_path)) {
@@ -174,32 +179,63 @@ meta_und <- bind_rows(
   readRDS(file.path(ps_dir, "root_metadata_ps_index.rds")) %>% mutate(tissue = "root"),
   readRDS(file.path(ps_dir, "stem_metadata_ps_index.rds")) %>% mutate(tissue = "stem")
 )
+# --- Underground Network ---
 net_und  <- readRDS(file.path(data_dir, "net_und.rds"))
-DatExpr_und <- readRDS(file.path(data_dir, "DatExpr_und.rds"))
+# Correctly map numeric labels to colors/sizes
+modules_und <- data.frame(
+  module_num = net_und$colors,
+  module_color = labels2colors(net_und$colors)
+) %>% 
+  group_by(module_num, module_color) %>%
+  summarise(module_size = n(), .groups = "drop") %>%
+  filter(module_num != 0) %>%
+  arrange(module_num) %>%
+  mutate(module_label = paste0("um", module_num, "_", module_color))
 
-# Use global VST from counts (PCA function was used previously to get vst_matrix)
-# For simplicity, we assume the user has the counts and we'll just use them if needed.
-# But for preservation, we need the EXACT VST space.
-# I'll rely on the pre-computed RDS results here.
 
-modules_und <- table(labels2colors(net_und$colors)) %>% as.data.frame() %>%
-  rename(module_color = Var1, module_size = Freq) %>%
-  mutate(module_num = as.numeric(factor(module_color, levels = setdiff(unique(module_color), "grey"))),
-         module_label = paste0("um", module_num, "_", module_color))
+# ------------------------------------------------------------
+# 2.1) Root Preservation (Merged 2024 Subset + Sorghum)
+# ------------------------------------------------------------
+pres_root_2024_path <- file.path(data_dir, "pres_list_root_2024.rds")
+pres_und_global_path <- file.path(data_dir, "preservation_list_und.rds")
 
-# Root Preservation
-pres_root_path <- file.path(data_dir, "pres_list_root_2024.rds")
-if (file.exists(pres_root_path)) {
-  cat("Loading pre-computed root preservation results...\n")
-  pres_list_root <- readRDS(pres_root_path)
-  pres_summary_root <- extract_all_preservation_results(pres_list_root, modules_und)
-  write_tsv(pres_summary_root, file.path(out_dir, "pres_summary_accessions_root.txt"))
+if (file.exists(pres_root_2024_path)) {
+  cat("Loading 2024-only root preservation results...\n")
+  pres_list_root_2024 <- readRDS(pres_root_2024_path)
+  pres_summary_root_2024 <- extract_all_preservation_results(pres_list_root_2024, modules_und)
+  
+  # Merge in Sorghum (Sb_BTx623) from the global list if missing
+  if (file.exists(pres_und_global_path)) {
+    cat("Merging Sorghum (Sb_BTx623) from global underground results...\n")
+    pres_list_und_global <- readRDS(pres_und_global_path)
+    
+    # Extract only Sorghum (safely handles named list)
+    pres_sorghum <- pres_list_und_global[names(pres_list_und_global) == "Sb_BTx623"]
+    
+    if (length(pres_sorghum) > 0 && !is.null(pres_sorghum[[1]])) {
+      pres_summary_sorghum <- extract_all_preservation_results(pres_sorghum, modules_und)
+      
+      # Final combined root summary
+      pres_summary_root_final <- bind_rows(pres_summary_root_2024, pres_summary_sorghum) %>%
+        distinct(accession, module_id, .keep_all = TRUE)
+      
+      write_tsv(pres_summary_root_final, file.path(out_dir, "pres_summary_accessions_root.txt"))
+      cat("  Root summary merged and saved.\n")
+    } else {
+      write_tsv(pres_summary_root_2024, file.path(out_dir, "pres_summary_accessions_root.txt"))
+      warning("Sorghum not found in global results; root summary contains only 2024 subset.")
+    }
+  } else {
+    write_tsv(pres_summary_root_2024, file.path(out_dir, "pres_summary_accessions_root.txt"))
+  }
 }
 
-# Stem Preservation
+# ------------------------------------------------------------
+# 2.2) Stem Preservation
+# ------------------------------------------------------------
 pres_stem_path <- file.path(data_dir, "pres_list_stem.rds")
 if (file.exists(pres_stem_path)) {
-  cat("Loading pre-computed stem preservation results...\n")
+  cat("Loading stem preservation results...\n")
   pres_list_stem <- readRDS(pres_stem_path)
   pres_summary_stem <- extract_all_preservation_results(pres_list_stem, modules_und)
   write_tsv(pres_summary_stem, file.path(out_dir, "pres_summary_accessions_stem.txt"))
