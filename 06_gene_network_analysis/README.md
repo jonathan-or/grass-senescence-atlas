@@ -6,6 +6,9 @@ This module focuses on identifying co-expression networks and regulatory hubs du
 
 1. **`01_wgcna_leaf.R`**: Performs WGCNA on leaf samples from the remobilizer cohort.
 2. **`02_wgcna_underground.R`**: Performs WGCNA on combined root and stem samples from the remobilizer cohort.
+3. **`03_wgcna_module_preservation.R`**: Assesses module preservation (Zsummary) across species and tissues.
+4. **`04_wgcna_preservation_plotting.R`**: Generates publication-ready Zsummary plots for annual species.
+5. **`05_wgcna_kME_analysis.R`**: Analyzes intramodular connectivity (kME) preservation and produces integrated hub heatmaps.
 
 ## Methodology
 
@@ -24,7 +27,9 @@ To bypass high-memory Topological Overlap Matrix (TOM) computations and ensure c
 - `net_leaf.rds`, `net_und.rds`: WGCNA network objects.
 - `DatExpr_leaf.rds`, `DatExpr_und.rds`: Filtered expression matrices.
 - `09_TOM_UMAP_embedding_leaf.csv`, `09_TOM_UMAP_embedding_underground.csv`: Pre-computed UMAP coordinates.
-- `OG_symbols_m2_blue.txt`, `OG_symbols_underground.txt`: Curated hub gene symbols.
+- `pres_list_leaf.rds`, `pres_list_root_2024.rds`, `pres_list_stem.rds`: Pre-computed module preservation results (100 permutations).
+- `Supplemental_Data_kME_Master_Table_v2.csv`: Master table of kME values across all species and tissues.
+- `OG_symbols_m2_blue.txt`, `OG_symbols_underground.txt`, `OG_symbols_hubs.txt`: Curated hub gene symbols.
 
 ## Requirements
 

@@ -74,6 +74,13 @@ temp_*
 !06_gene_network_analysis/results/*.pdf
 !06_gene_network_analysis/results/*.tiff
 
+# Legacy RDS results explicitly moved to 06_ module
+!06_gene_network_analysis/data/pres_list_leaf.rds
+!06_gene_network_analysis/data/pres_list_root_2024.rds
+!06_gene_network_analysis/data/pres_list_stem.rds
+!06_gene_network_analysis/data/preservation_list_und.rds
+!06_gene_network_analysis/data/Supplemental_Data_kME_Master_Table_v2.csv
+
 # Exclude legacy raw data directories
 pot-in-pot/
 remobilization/
