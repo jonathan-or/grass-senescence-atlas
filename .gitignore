@@ -67,6 +67,13 @@ temp_*
 !metadata.txt
 !*.txt  # We'll probably want metadata.txt but maybe not all .txt files.
 
+# Allow WGCNA data and key results
+!06_gene_network_analysis/data/*
+!06_gene_network_analysis/results/*.png
+!06_gene_network_analysis/results/*.csv
+!06_gene_network_analysis/results/*.pdf
+!06_gene_network_analysis/results/*.tiff
+
 # Exclude legacy raw data directories
 pot-in-pot/
 remobilization/
