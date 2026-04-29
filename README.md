@@ -1,5 +1,6 @@
 # A multi-organ atlas of gene expression during grass senescence 
-This repository contains the analysis pipeline and scripts for the study: Dysregulation of underground sink networks limits nitrogen recycling in annual grasses.
+This repository contains the analysis pipeline and scripts for the study: A transcriptomic atlas of grass senescence reveals divergent underground sink networks limit nitrogen recycling in annuals
+Link to the paper:
 
 ## Repository Structure
 
