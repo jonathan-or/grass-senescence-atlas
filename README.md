@@ -2,6 +2,7 @@
 This repository contains the analysis pipeline and scripts for the study: A transcriptomic atlas of grass senescence reveals divergent underground sink networks limit nitrogen recycling in annuals
 
 Link to the paper:
+https://www.biorxiv.org/content/10.64898/2026.05.05.723041v1
 
 ## Repository Structure
 
