@@ -246,7 +246,7 @@ if (need_und_vst) {
 # Preservation for every accession in meta_subset with >= min_n samples
 run_und_preservation <- function(meta_subset, min_n = 5L) {
   accs <- meta_subset %>%
-    count(accession, species, name = "n_samples") %>%
+    dplyr::count(accession, species, name = "n_samples") %>%
     filter(n_samples >= min_n) %>%
     arrange(accession)
   pres_list <- pmap(list(accs$accession, accs$species), function(acc, sp) {
