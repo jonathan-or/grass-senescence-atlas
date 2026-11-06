@@ -26,6 +26,10 @@ source(file.path(getwd(), "03_cross-species_transcriptome_analysis", "Functions.
 # (100 permutations per accession; slow)
 force_recompute <- FALSE
 
+# Accessions run in parallel when recomputing (forked processes; Linux/macOS).
+# Results do not depend on n_cores: each run sets its own random seed.
+n_cores <- 1L
+
 # =========================
 # 0) Paths & Functions
 # =========================
@@ -142,6 +146,37 @@ extract_all_preservation_results <- function(pres_list, modules_meta, drop_gold 
   })
 }
 
+# Preservation for each accession in accs (accession, species), 100 permutations.
+# Each result is cached in data/pres_cache/<set_name>/<accession>.rds as soon as it
+# finishes, so an interrupted run resumes where it stopped. Cached results are
+# reused even with force_recompute = TRUE; delete data/pres_cache/ to start fresh.
+run_preservation_set <- function(set_name, accs, meta_subset, net_ref, DatExpr_ref, full_vst) {
+  cache_dir <- file.path(data_dir, "pres_cache", set_name)
+  dir.create(cache_dir, showWarnings = FALSE, recursive = TRUE)
+
+  run_one <- function(i) {
+    acc <- accs$accession[i]
+    cache_file <- file.path(cache_dir, paste0(acc, ".rds"))
+    if (file.exists(cache_file)) return(readRDS(cache_file))
+    res <- tryCatch(run_modpres_to_mp(meta_subset, net_ref, DatExpr_ref, full_vst, acc, accs$species[i], nPermutations = 100),
+                    error = function(e) { message("Error in ", acc, ": ", e$message); NULL })
+    if (!is.null(res)) {
+      # write then rename, so an interrupted run never leaves a partial cache file
+      saveRDS(res, paste0(cache_file, ".tmp"))
+      file.rename(paste0(cache_file, ".tmp"), cache_file)
+    }
+    res
+  }
+
+  if (n_cores > 1) {
+    pres_list <- parallel::mclapply(seq_len(nrow(accs)), run_one, mc.cores = n_cores, mc.preschedule = FALSE)
+  } else {
+    pres_list <- lapply(seq_len(nrow(accs)), run_one)
+  }
+  names(pres_list) <- accs$accession
+  pres_list
+}
+
 # =========================
 # 1) Leaf Preservation
 # =========================
@@ -177,11 +212,7 @@ if (file.exists(pres_leaf_path) && !force_recompute) {
     accession_palette = accession_palette
   )$vst_matrix
   accs <- meta_leaf %>% distinct(accession, species)
-  pres_list_leaf <- pmap(list(accs$accession, accs$species), function(acc, sp) {
-    tryCatch(run_modpres_to_mp(meta_leaf, net_leaf, DatExpr_leaf, vst_leaf, acc, sp, nPermutations = 100),
-             error = function(e) { message("Error in ", acc, ": ", e$message); NULL })
-  })
-  names(pres_list_leaf) <- accs$accession
+  pres_list_leaf <- run_preservation_set("leaf", accs, meta_leaf, net_leaf, DatExpr_leaf, vst_leaf)
   saveRDS(pres_list_leaf, pres_leaf_path)
 }
 
@@ -244,17 +275,12 @@ if (need_und_vst) {
 }
 
 # Preservation for every accession in meta_subset with >= min_n samples
-run_und_preservation <- function(meta_subset, min_n = 5L) {
+run_und_preservation <- function(set_name, meta_subset, min_n = 5L) {
   accs <- meta_subset %>%
     dplyr::count(accession, species, name = "n_samples") %>%
     filter(n_samples >= min_n) %>%
     arrange(accession)
-  pres_list <- pmap(list(accs$accession, accs$species), function(acc, sp) {
-    tryCatch(run_modpres_to_mp(meta_subset, net_und, DatExpr_und, vst_und, acc, sp, nPermutations = 100),
-             error = function(e) { message("Error in ", acc, ": ", e$message); NULL })
-  })
-  names(pres_list) <- accs$accession
-  pres_list
+  run_preservation_set(set_name, accs, meta_subset, net_und, DatExpr_und, vst_und)
 }
 
 # ------------------------------------------------------------
@@ -266,7 +292,7 @@ if (file.exists(pres_root_2024_path) && !force_recompute) {
 } else {
   cat("Running 2024 root preservation (100 permutations per accession)...\n")
   meta_root_2024 <- meta_und %>% filter(tissue == "root", as.character(season) == "2024")
-  pres_list_root_2024 <- run_und_preservation(meta_root_2024)
+  pres_list_root_2024 <- run_und_preservation("root_2024", meta_root_2024)
   saveRDS(pres_list_root_2024, pres_root_2024_path)
 }
 pres_summary_root_2024 <- extract_all_preservation_results(pres_list_root_2024, modules_und)
@@ -280,7 +306,7 @@ if (file.exists(pres_und_global_path) && !force_recompute) {
   pres_sorghum <- readRDS(pres_sorghum_path)
 } else {
   cat("Running Sorghum root preservation (100 permutations)...\n")
-  pres_sorghum <- run_und_preservation(meta_und %>% filter(tissue == "root", accession == "Sb_BTx623"))
+  pres_sorghum <- run_und_preservation("root_sorghum", meta_und %>% filter(tissue == "root", accession == "Sb_BTx623"))
   saveRDS(pres_sorghum, pres_sorghum_path)
 }
 pres_summary_sorghum <- extract_all_preservation_results(pres_sorghum, modules_und)
@@ -299,7 +325,7 @@ if (file.exists(pres_stem_path) && !force_recompute) {
 } else {
   cat("Running 2024 stem preservation (100 permutations per accession)...\n")
   meta_stem_2024 <- meta_und %>% filter(tissue == "stem", as.character(season) == "2024")
-  pres_list_stem <- run_und_preservation(meta_stem_2024)
+  pres_list_stem <- run_und_preservation("stem_2024", meta_stem_2024)
   saveRDS(pres_list_stem, pres_stem_path)
 }
 pres_summary_stem <- extract_all_preservation_results(pres_list_stem, modules_und)
