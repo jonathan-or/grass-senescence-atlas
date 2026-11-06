@@ -30,7 +30,7 @@ To bypass high-memory Topological Overlap Matrix (TOM) computations and ensure c
 - `09_TOM_UMAP_embedding_leaf.csv`, `09_TOM_UMAP_embedding_underground.csv`: Pre-computed UMAP coordinates.
 - `pres_list_leaf.rds`, `pres_list_root_2024.rds`, `pres_list_stem.rds`: Pre-computed module preservation results (100 permutations).
 - `preservation_list_und.rds`: Underground preservation across all seasons; only *S. bicolor* (`Sb_BTx623`, sampled in 2023) is used, merged into the root results.
-- `Supplemental_Data_kME_Master_Table_v2.csv`: Master table of per-accession kME values (leaf m2_blue; underground um1_turquoise and um2_blue) for the five focal accessions.
+- `Supplemental_Data_kME_Master_Table_v2.csv`: Master table of per-accession kME values (leaf m2_blue; underground um1_turquoise and um2_blue; Supplementary Dataset SD13) for the five accessions compared in Figure 6 (*A. gerardi*, *S. nutans*, *T. dactyloides* 'Pete', *S. bicolor*, *Z. mays*). Module preservation (SD12) was tested in all accessions with enough libraries, including *P. virgatum*; *P. virgatum* is not in the kME table because it had too few root libraries to compare leaf and root kME in the same figure.
 - `OG_symbols_m2_blue.txt`, `OG_symbols_underground.txt`, `OG_symbols_hubs.txt`: Curated hub gene symbols.
 
 Scripts load these files when present. To regenerate them, delete the file or set `force_recompute <- TRUE` at the top of `03_wgcna_module_preservation.R` or `05_wgcna_kME_analysis.R`. Recomputed preservation results reproduce the provided ones; recomputed kME values match the provided table except that OGs with zero variance in an accession are `NA` (five maize underground OGs, provided as ~1e-16).
