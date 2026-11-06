@@ -53,3 +53,4 @@ To successfully run scripts `01` and `02`, a subset or full dataset must be stru
 
 - `Msinensis_..._helixer.gff.gz`: Helixer annotation for *Miscanthus sinensis*.
 - `Pvirgatum..._helixer.gff.gz`: Helixer annotation for *Panicum virgatum*.
+- `Sorghum_bicolor..._helixer.gff.gz`: Helixer annotation for *Sorghum bicolor* (BTx623).

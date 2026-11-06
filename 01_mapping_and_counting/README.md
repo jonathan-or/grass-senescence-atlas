@@ -12,7 +12,7 @@ Raw sequence data quality is evaluated, and adapter sequences along with low-qua
 Following trimming, read quality is verified using **FastQC**. Summary statistics of the trimming step are subsequently computed (`03_2_trimming_stats.sh`).
 
 ## 3. rRNA Filtering
-To remove ribosomal RNA contamination, clean reads are mapped against an aggregated index of Arabidopsis and Zea mays rRNA sequences (`Arabidopsis_Zea_rRNA.fasta`). This step (`04_rRNA_filtering.sh`) utilizes [tool name, e.g., Bowtie2] to safely discard rRNA reads while keeping high-quality mRNA sequences for alignment.
+To remove ribosomal RNA contamination, clean reads are mapped against an aggregated index of Arabidopsis and Zea mays rRNA sequences (`Arabidopsis_Zea_rRNA.fasta`). This step (`04_rRNA_filtering.sh`) aligns reads with **Minimap2** (v2.27, `-ax sr` preset) and keeps the unaligned reads (extracted with Samtools) as clean mRNA reads for genome alignment.
 
 ## 4. Genome Alignment
 Filtered reads are aligned to the respective reference genomes using **STAR** (Spliced Transcripts Alignment to a Reference, `05_STAR_alignment.sh`).
