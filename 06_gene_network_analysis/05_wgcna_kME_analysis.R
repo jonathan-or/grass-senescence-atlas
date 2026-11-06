@@ -3,32 +3,147 @@
 ## - Computes intramodular connectivity (kME) across species
 ## - Correlates Annual (Maize/Sorghum) vs Perennial hub-ness
 ## - Generates preservation grids and integrated hub heatmaps
+##
+## kME master table (Supplementary Data SD13): per-accession kME for
+## leaf m2_blue (leaf VST, as 01_wgcna_leaf.R) and underground um1_turquoise /
+## um2_blue (ROOT-ONLY VST: root libraries of all accessions). Loaded if present,
+## otherwise rebuilt here.
 ############################################################
 
 suppressPackageStartupMessages({
   library(WGCNA)
   library(tidyverse)
   library(ggpubr)
+  library(DESeq2)
 })
 
 # --- Reproducibility ---
 set.seed(42)
 
+source(file.path(getwd(), "03_cross-species_transcriptome_analysis", "Functions.R"))
+
+# Set to TRUE to rebuild the kME master table even if it exists
+force_recompute <- FALSE
+
 # =========================
 # 0) Paths & Functions
 # =========================
-data_dir <- file.path(getwd(), "06_gene_network_analysis", "data")
-out_dir  <- file.path(getwd(), "06_gene_network_analysis", "results")
+ps_dir    <- file.path(getwd(), "04_photosynthetic_index", "data")
+annot_dir <- file.path(getwd(), "03_cross-species_transcriptome_analysis", "data")
+data_dir  <- file.path(getwd(), "06_gene_network_analysis", "data")
+out_dir   <- file.path(getwd(), "06_gene_network_analysis", "results")
+dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+# kME within modules for ONE accession: module eigengenes are computed from this
+# accession's samples only; kME = Pearson cor(gene, own-module eigengene).
+# Genes with zero variance within the accession (e.g. no reads in any of its
+# libraries) are left out of the eigengene and get kME = NA; if kept, they shift
+# the eigengene in a WGCNA-version-dependent way.
+get_kME_within_modules_per_accession <- function(meta, full_vst, ref_colors_named, accession, species,
+                                                 drop_controls = TRUE, min_genes_per_module = 5) {
+  full_vst <- as.matrix(full_vst); mode(full_vst) <- "numeric"
+
+  samp_ids <- meta %>%
+    filter(species == !!species, accession == !!accession) %>%
+    pull(sample_id) %>%
+    intersect(colnames(full_vst))
+  if (!length(samp_ids)) {
+    warning(sprintf("No samples for accession '%s' (species '%s').", accession, species))
+    return(tibble())
+  }
+
+  keep_genes <- intersect(names(ref_colors_named), rownames(full_vst))
+  Expr <- t(full_vst[keep_genes, samp_ids, drop = FALSE])  # samples x genes
+  colors_here <- ref_colors_named[keep_genes]
+
+  if (drop_controls) {
+    keep <- !(colors_here %in% c("grey", "gold"))
+    Expr <- Expr[, keep, drop = FALSE]
+    colors_here <- colors_here[keep]
+  }
+
+  var_ok <- setNames(matrixStats::colSds(Expr) > 0, colnames(Expr))
+  ME_w <- moduleEigengenes(Expr[, var_ok, drop = FALSE], colors = colors_here[var_ok])$eigengenes
+  ME_w <- orderMEs(ME_w)
+
+  imap_dfr(split(names(colors_here), colors_here), function(genes_in_mod, mod_col) {
+    me_name <- paste0("ME", mod_col)
+    if (length(genes_in_mod) < min_genes_per_module || !me_name %in% colnames(ME_w)) return(NULL)
+    kme_vals <- suppressWarnings(cor(Expr[, genes_in_mod, drop = FALSE], ME_w[, me_name], use = "pairwise"))
+    kme_vals[!var_ok[genes_in_mod]] <- NA
+    tibble(gene_id = genes_in_mod, module_color = mod_col, kME = as.numeric(kme_vals),
+           accession = accession, species = species)
+  })
+}
+
+# kME for the focal accessions in one network, restricted to the exported modules
+kme_accessions <- c("Ag_Niagara", "Sn_WI", "Td_Pete", "Sb_BTx623", "Zm_lh287Xlh244")
+
+get_network_kME <- function(meta, full_vst, net, DatExpr, network, modules) {
+  ref_colors <- setNames(labels2colors(net$colors), colnames(DatExpr))
+  map_dfr(kme_accessions, function(acc) {
+    sp <- unique(meta$species[meta$accession == acc])
+    get_kME_within_modules_per_accession(meta, full_vst, ref_colors, acc, sp)
+  }) %>%
+    filter(module_color %in% modules) %>%
+    mutate(network = network)
+}
 
 # =========================
-# 1) Load kME Master Table
+# 1) Load or build kME Master Table
 # =========================
 kme_master_path <- file.path(data_dir, "Supplemental_Data_kME_Master_Table_v2.csv")
-if (file.exists(kme_master_path)) {
+if (file.exists(kme_master_path) && !force_recompute) {
   cat("Loading pre-computed kME master table...\n")
   kME_final <- read_csv(kme_master_path, show_col_types = FALSE)
 } else {
-  stop("kME master table not found. Please ensure Supplemental_Data_kME_Master_Table_v2.csv is in the data directory.")
+  cat("Building kME master table...\n")
+
+  # Leaf: same VST as 01_wgcna_leaf.R (all leaf libraries)
+  leaf_metadata_ps_index <- readRDS(file.path(ps_dir, "leaf_metadata_ps_index.rds")) %>%
+    mutate(sample_id = as.character(sample_id))
+  vst_leaf <- plot_pca_ggplot2(
+    count_data = readRDS(file.path(ps_dir, "leaf_og_counts_dps.rds")),
+    metadata = leaf_metadata_ps_index,
+    color_by = "species",
+    species_palette = species_palette,
+    accession_palette = accession_palette
+  )$vst_matrix
+  kME_leaf <- get_network_kME(leaf_metadata_ps_index, vst_leaf,
+                              readRDS(file.path(data_dir, "net_leaf.rds")),
+                              readRDS(file.path(data_dir, "DatExpr_leaf.rds")),
+                              "leaf", "blue")
+
+  # Underground: ROOT-ONLY VST (all root libraries). Note: not the root + stem
+  # VST the underground network was built on (02_wgcna_underground.R)
+  root_metadata_ps_index <- readRDS(file.path(ps_dir, "root_metadata_ps_index.rds")) %>%
+    mutate(sample_id = as.character(sample_id))
+  vst_root <- plot_pca_ggplot2(
+    count_data = as.matrix(readRDS(file.path(ps_dir, "root_og_counts_dps.rds"))),
+    metadata = root_metadata_ps_index,
+    color_by = "species",
+    species_palette = species_palette,
+    accession_palette = accession_palette
+  )$vst_matrix
+  kME_root <- get_network_kME(root_metadata_ps_index, vst_root,
+                              readRDS(file.path(data_dir, "net_und.rds")),
+                              readRDS(file.path(data_dir, "DatExpr_und.rds")),
+                              "underground", c("blue", "turquoise"))
+
+  # Maize gene members per OG
+  zm_id_map <- readRDS(file.path(annot_dir, "gene_og_mapping.rds")) %>%
+    filter(Species == "Zea_mays") %>%
+    group_by(Orthogroup) %>%
+    summarise(Maize_GeneID = paste(unique(GeneID), collapse = "; "), .groups = "drop")
+
+  kME_final <- bind_rows(kME_leaf, kME_root) %>%
+    left_join(zm_id_map, by = c("gene_id" = "Orthogroup")) %>%
+    select(Orthogroup = gene_id, Network = network, subnetwork = module_color,
+           Species = species, Accession = accession, kME, Maize_GeneID) %>%
+    arrange(Network, subnetwork, Species, desc(kME))
+
+  write_csv(kME_final, kme_master_path)
+  cat("  kME master table saved:", nrow(kME_final), "rows\n")
 }
 
 # =========================
@@ -86,7 +201,7 @@ ggsave(file.path(out_dir, "15b_grid_root_blue_kME.png"), p_root_blue, width = 5,
 cat("Generating integrated hub heatmap...\n")
 
 og_hubs <- read_tsv(file.path(data_dir, "OG_symbols_hubs.txt"), col_types = "cccc") %>%
-  rename(OG_symbol_hub = OG_symbol) # Avoid conflict if any
+  dplyr::rename(OG_symbol_hub = OG_symbol) # Avoid conflict if any; S4Vectors (DESeq2) masks rename()
 
 bwr_palette <- rev(c("#ca1875", "#ff1744", "#f06848", "#fceba5", "#e4f2f8", "#0dd2e8"))
 
