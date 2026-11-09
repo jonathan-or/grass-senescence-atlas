@@ -456,15 +456,16 @@ ggsave(file.path(out_dir, "15_GO_bar_plot_um2_blue.png"), plot_go_bars("blue"), 
 
 # Weekly dynamics of selected modules on the TOM-UMAP; other OGs in grey
 dyn_colors <- rev(c("#ca1875","#ef2c69","#ff1744","#f06848","#fda25e","#fceba5","#f2f8d5","#e4f2f8"))
-plot_module_dynamics <- function(df_z, module_color, title = NULL) {
+plot_module_dynamics <- function(df_z, module_color, title = NULL, point_size = 0.5, legend_title = "z-score",
+                                 limits = c(-2, 2)) {
   genes_mod <- colnames(DatExpr_und)[moduleColors_und == module_color]
   ggplot() +
     geom_point(data = filter(df_umap, !gene %in% genes_mod), aes(UMAP1, UMAP2),
                color = "grey82", size = 0.4, alpha = 0.4, stroke = 0) +
     geom_point(data = df_umap %>% select(gene, UMAP1, UMAP2) %>%
                  inner_join(filter(df_z, gene %in% genes_mod), by = "gene"),
-               aes(UMAP1, UMAP2, color = z_med), size = 0.5, alpha = 0.95, stroke = 0) +
-    scale_color_gradientn(colors = dyn_colors, limits = c(-2, 2), oob = scales::squish, name = "z-score") +
+               aes(UMAP1, UMAP2, color = z_med), size = point_size, alpha = 0.95, stroke = 0) +
+    scale_color_gradientn(colors = dyn_colors, limits = limits, oob = scales::squish, name = legend_title) +
     coord_equal(expand = FALSE) +
     facet_wrap(~ week, nrow = 1) +
     labs(title = title) +
@@ -476,6 +477,33 @@ plot_module_dynamics <- function(df_z, module_color, title = NULL) {
 p_dyn_mods <- plot_module_dynamics(df_z_week, "turquoise") / plot_module_dynamics(df_z_week, "blue") +
   plot_layout(guides = "collect")
 ggsave(file.path(out_dir, "17_TOM_UMAP_dynamics_um1_um2.png"), p_dyn_mods, width = 6.5, height = 1.8, dpi = 600)
+
+# Supplementary Figure 13: weekly dynamics of um2_blue per accession, 2024 root libraries only
+# (maize stalk and perennial rhizomes left out). Expression is the root-only VST of all root
+# libraries (as in 05_wgcna_kME_analysis.R); each OG is z-scored across the 2024 root libraries
+# of the three accessions shown, then split by accession.
+sf13_accessions <- c(Zm = "Zm_lh287Xlh244", Td = "Td_Pete", Sn = "Sn_WI")
+root_meta_sf13 <- root_metadata_ps_index %>% mutate(sample_id = as.character(sample_id))
+vst_root <- plot_pca_ggplot2(
+  count_data = as.matrix(root_og_counts_dps), metadata = root_meta_sf13, color_by = "species",
+  species_palette = species_palette, accession_palette = accession_palette
+)$vst_matrix
+meta_sf13 <- root_meta_sf13 %>%
+  filter(accession %in% sf13_accessions, season == "2024", week >= 5, week <= 14,
+         sample_id %in% colnames(vst_root))
+genes_blue <- colnames(DatExpr_und)[moduleColors_und == "blue"]
+Z_sf13 <- scale(t(as.matrix(vst_root[genes_blue, meta_sf13$sample_id])))
+for (acc in names(sf13_accessions)) {
+  meta_acc <- filter(meta_sf13, accession == sf13_accessions[[acc]])
+  cat("SF13", acc, "libraries per week:", table(meta_acc$week), "\n")
+  df_z_acc <- as_tibble(Z_sf13[meta_acc$sample_id, , drop = FALSE], rownames = "sample_id") %>%
+    pivot_longer(-sample_id, names_to = "gene", values_to = "z") %>%
+    left_join(select(meta_acc, sample_id, week), by = "sample_id") %>%
+    group_by(gene, week) %>%
+    summarise(z_med = median(z, na.rm = TRUE), .groups = "drop")
+  p_acc <- plot_module_dynamics(df_z_acc, "blue", "Dynamics by Week", point_size = 0.8, legend_title = "Expression (Z)")
+  ggsave(file.path(out_dir, paste0("18_TOM_UMAP_dynamics_um2_", acc, ".png")), p_acc, width = 10, height = 1.25, dpi = 480)
+}
 
 
 cat("\n==== Underground WGCNA pipeline complete ====\n")

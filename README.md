@@ -51,9 +51,9 @@ Scripts that draw each figure (run from the repository root). Schematics, photog
 | S9 | `05_N_quant/03_wang_validation.R` |
 | S10 | `05_N_quant/04_n_allocation_all_accessions.R` |
 | S11 | `05_N_quant/05_maize_gradient_source_sink.R` |
-| S12 | `06_gene_network_analysis/02_wgcna_underground.R` |
+| S12-S13 | `06_gene_network_analysis/02_wgcna_underground.R` |
 
-Not yet in the repository: the species tree (Figure 1D, Supplementary Figure 3A), the orthogroup summary plots (Supplementary Figure 3B-D) and the per-accession um2_blue dynamics (Supplementary Figure 13).
+Not yet in the repository: the species tree (Figure 1D, Supplementary Figure 3A) and the orthogroup summary plots (Supplementary Figure 3B-D).
 
 ## Getting Started
 
