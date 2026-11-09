@@ -64,14 +64,53 @@ fit_leaf <- leaf_pseudotime_result$fit
 leaf_metadata <- merge(leaf_metadata, pseudotime_df, by.x = "sample_id", by.y = "SampleID")
 
 # 4. Styled Figure 2B PCA via inferred Pseudotime
+# 4. Styled Figure 2B PCA via inferred Pseudotime (Dark Green to Deep Orange Senescence Gradient)
 pca_leaf_pseudotime <- plot_pca_ggplot2(leaf_og_counts, leaf_metadata, "Pseudotime")
-p2b <- export_pca_plot(pca_leaf_pseudotime$pca_plot, file.path(out_dir, "Figure2B_pca_pseudotime.tiff"), width = 2.5, height = 2.5, point_size=1.2)
-p2b_styled <- p2b + 
-  geom_point(aes(fill = Pseudotime), shape = 21, color = "black", size = 1.2, stroke = 0.1) +
-  scale_fill_viridis_c(option = "magma", direction = -1) + 
-  theme_classic(base_size = 10) + theme(plot.title=element_blank(), axis.title=element_text(size=10), legend.position="right")
 
-ggsave(file.path(out_dir, "Figure2B_pca_pseudotime_styled.tiff"), plot = p2b_styled, width = 2.5, height = 2.5, units = "in", dpi = 600, compression = "lzw")
+p2b_base <- ggplot(pca_leaf_pseudotime$pca_df, aes(x = PC1, y = PC2, fill = Pseudotime)) +
+  geom_point(shape = 21, color = "black", size = 1.1, stroke = 0.12, alpha = 0.9) +
+  scale_fill_gradientn(
+    colors = c("#0a5323", "#41ab5d", "#ffea46", "#f5b025", "#d97706"),
+    name = "Pseudotime"
+  ) +
+  labs(
+    x = paste0("PC1 - ", pca_leaf_pseudotime$variance_explained[1], " % variance"),
+    y = paste0("PC2 - ", pca_leaf_pseudotime$variance_explained[2], " % variance")
+  ) +
+  theme_classic(base_size = 8)
+
+# A. Labeled Version (With Legend)
+p2b_legend <- p2b_base +
+  theme(
+    plot.title = element_blank(),
+    axis.title = element_text(size = 8),
+    axis.text = element_text(size = 7),
+    legend.position = "right",
+    legend.key.height = unit(0.3, "in"),
+    legend.key.width = unit(0.12, "in"),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 7)
+  )
+
+ggsave(file.path(out_dir, "Figure2B_pca_pseudotime_styled_legend.tiff"), plot = p2b_legend, width = 3.0, height = 2.5, units = "in", dpi = 600, compression = "lzw")
+ggsave(file.path(out_dir, "Figure2B_pca_pseudotime_styled_legend.png"), plot = p2b_legend, width = 3.0, height = 2.5, units = "in", dpi = 300)
+ggsave(file.path(out_dir, "Figure2B_pca_pseudotime_styled.tiff"), plot = p2b_legend, width = 3.0, height = 2.5, units = "in", dpi = 600, compression = "lzw")
+ggsave(file.path(out_dir, "Figure2B_pca_pseudotime_styled.png"), plot = p2b_legend, width = 3.0, height = 2.5, units = "in", dpi = 300)
+
+# B. Unlabeled Version (No Legend, Clean 2.5x2.5)
+p2b_nolegend <- p2b_base +
+  theme(
+    plot.title = element_blank(),
+    axis.title = element_text(size = 8),
+    axis.text = element_text(size = 7),
+    legend.position = "none"
+  )
+
+ggsave(file.path(out_dir, "Figure2B_pca_pseudotime_styled_nolegend.tiff"), plot = p2b_nolegend, width = 2.5, height = 2.5, units = "in", dpi = 600, compression = "lzw")
+ggsave(file.path(out_dir, "Figure2B_pca_pseudotime_styled_nolegend.png"), plot = p2b_nolegend, width = 2.5, height = 2.5, units = "in", dpi = 300)
+
+
+
 
 # 5. Chronological Time vs Pseudotime Regression (SupFig 2D)
 cat("Testing Correlation between Julian Days and Pseudotime...\n")

@@ -148,19 +148,32 @@ print(umap_species)
 dev.off()
 
 # --- 2. UMAP colored by tissue_type palette ---
+result$umap_df <- result$umap_df %>%
+  mutate(
+    tissue_split = case_when(
+      tissue_type == "stalk" ~ "stalk",
+      tissue_type == "rhizome" ~ "rhizome",
+      tissue_type == "leaf" ~ "leaf",
+      tissue_type %in% c("root", "thick_roots", "fine_roots") ~ "root"
+    )
+  )
+
 tissue_type_palette <- c(
   "leaf" = "#30e004",    # Green
   "root" = "#ee6766",    # Purple
-  "stem" = "#07cde3"     # Blue
+  "rhizome" = "#07cde3", # Blue (originally stem)
+  "stalk" = "#0066cc"    # Darker Blue
 )
 
+result$umap_plot$data <- result$umap_df
 umap_tissue_type <- result$umap_plot +
+  aes(color = tissue_split) +
   scale_color_manual(values = tissue_type_palette, name = "Tissue Type") +
-  geom_point(size = 0.025, alpha = 0.9, stroke = 0) +
+  geom_point(size = 0.025, alpha = 0.9) +
   theme_classic(base_size = 8) +
   theme(
     plot.title = element_blank(),
-    axis.title = element_text(size = 14),
+    axis.title = element_text(size = 10),
     axis.text.y = element_blank(),
     axis.text.x = element_blank(),
     axis.ticks.x = element_blank(),
@@ -168,7 +181,7 @@ umap_tissue_type <- result$umap_plot +
     legend.position = "none"
   )
 
-tiff(file.path(out_dir, "umap_tissue_type.tiff"), width = 2.5, height = 2.5, units = "in", res = 600, compression = "lzw")
+tiff(file.path(out_dir, "umap_tissue_type.tiff"), width = 2.5, height = 2.5, units = "in", res = 600)
 print(umap_tissue_type)
 dev.off()
 
