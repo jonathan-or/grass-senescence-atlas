@@ -1,0 +1,5 @@
+Sample ID	accession	N%	batch	tissue	date
+104	Zea_mays_hybrid	1.95	4	kernel	10/23/24
+136	Zea_mays_hybrid	1.99	3	kernel	10/23/24
+137	Zea_mays_hybrid	2.06	2	kernel	10/23/24
+156	Zea_mays_hybrid	1.83	1	kernel	10/23/24
