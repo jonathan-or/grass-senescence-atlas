@@ -5,10 +5,10 @@ This module focuses on identifying co-expression networks and regulatory hubs du
 ## Scripts
 
 1. **`01_wgcna_leaf.R`**: Performs WGCNA on leaf samples from the remobilizer cohort.
-2. **`02_wgcna_underground.R`**: Performs WGCNA on combined root and stem samples from the remobilizer cohort.
+2. **`02_wgcna_underground.R`**: Performs WGCNA on combined root and stem samples from the remobilizer cohort, and draws Figure 5 (UMAP of the 464 libraries by ps_index and tissue, module sizes, eigengenes vs ps_index for rhizome and root, TOM-UMAP, GO enrichment of um1_turquoise and um2_blue, weekly dynamics of both modules) and Supplementary Figure 12 (root eigengenes vs ps_index by season). The library UMAP (5A-B) is recomputed on each run; layouts can differ between `uwot` versions, but the clustering of libraries does not.
 3. **`03_wgcna_module_preservation.R`**: Assesses module preservation (Zsummary) across species and tissues. Test expression is the VST used to build each reference network: the leaf VST for leaf, the combined root + stem VST for root (2024 season, plus *S. bicolor* from 2023) and stem (2024 season).
 4. **`04_wgcna_preservation_plotting.R`**: Generates publication-ready Zsummary plots for annual species.
-5. **`05_wgcna_kME_analysis.R`**: Builds the per-accession kME master table (Supplementary Data SD13), analyzes intramodular connectivity (kME) preservation and produces integrated hub heatmaps.
+5. **`05_wgcna_kME_analysis.R`**: Builds the per-accession kME master table (Supplementary Data SD13), analyzes intramodular connectivity (kME) preservation (Figure 6B, 6E, 6F) and produces the integrated hub heatmap (Figure 6C).
 
 ## Methodology
 

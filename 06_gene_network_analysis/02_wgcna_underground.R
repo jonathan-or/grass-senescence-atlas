@@ -114,6 +114,37 @@ meta_underground_remobilizer <- meta_underground_remobilizer %>%
   dplyr::slice(match(colnames(expr_underground_rem), sample_id))
 
 # =========================
+# 4b) UMAP of remobilizer underground libraries (Figure 5A, 5B)
+# =========================
+cat("UMAP of underground remobilizer libraries...\n")
+counts_underground_rem <- og_counts_underground[, meta_underground_remobilizer$sample_id, drop = FALSE]
+umap_und_rem <- run_umap_seurat_style(
+  count_data = counts_underground_rem, metadata = meta_underground_remobilizer,
+  color_by = "ps_index", species_palette = species_palette, accession_palette = accession_palette,
+  n_top_genes = 3000, n_pcs = 6, seed = 42
+)
+udf <- umap_und_rem$umap_df
+cat("  libraries:", nrow(udf), "| root:", sum(udf$tissue == "root"), "| rhizome:", sum(udf$tissue == "stem"), "\n")
+
+umap_panel_theme <- theme_classic(base_size = 10) +
+  theme(plot.title = element_blank(), axis.title = element_text(size = 9),
+        axis.text = element_blank(), axis.ticks = element_blank(), legend.position = "none")
+
+p_umap_und_ps <- ggplot(udf, aes(UMAP1, UMAP2)) +
+  geom_point(aes(fill = ps_index), shape = 21, size = 0.8, color = "darkslategray", stroke = 0.1) +
+  scale_fill_gradientn(colors = c("purple", "orange", "limegreen", "darkgreen")) +
+  coord_fixed() + umap_panel_theme
+ggsave(file.path(out_dir, "05a_umap_und_rem_psindex.tiff"), p_umap_und_ps,
+       width = 2.5, height = 2, units = "in", dpi = 600, compression = "lzw")
+
+p_umap_und_tissue <- ggplot(udf, aes(UMAP1, UMAP2)) +
+  geom_point(aes(fill = tissue), shape = 21, size = 0.6, color = "darkslategray", stroke = 0.05) +
+  scale_fill_manual(values = c(root = "#ee6766", stem = "#07cde3")) +  # stem = rhizome
+  coord_fixed() + umap_panel_theme
+ggsave(file.path(out_dir, "05b_umap_und_rem_tissue.tiff"), p_umap_und_tissue,
+       width = 1.5, height = 1.5, units = "in", dpi = 600, compression = "lzw")
+
+# =========================
 # 5) Build or load network
 # =========================
 net_und_path <- file.path(data_dir, "net_und.rds")
@@ -256,6 +287,54 @@ write_csv(ME_ps_tbl_und, file.path(out_dir, "04_ME_vs_ps_index_und.csv"))
 ps_order <- ME_ps_tbl_und %>% arrange(desc(rho_ps)) %>% pull(eigengene)
 moduleEigengenes_und <- moduleEigengenes_und[, ps_order, drop = FALSE]
 
+# Module eigengenes vs ps_index, rhizome (top) and root (bottom) (Figure 5D)
+module_levels_ps <- ME_ps_tbl_und %>% arrange(desc(rho_ps)) %>% pull(module_label)
+ME_long_und <- as_tibble(MEs_ps_und) %>%
+  mutate(sample_id = rownames(DatExpr_und)[keep_ps]) %>%
+  pivot_longer(-sample_id, names_to = "eigengene", values_to = "uME_value") %>%
+  left_join(meta_underground_remobilizer %>% select(sample_id, ps_index, tissue), by = "sample_id") %>%
+  left_join(ME_ps_tbl_und %>% select(eigengene, color, module_label), by = "eigengene") %>%
+  mutate(module_label = factor(module_label, levels = module_levels_ps))
+
+plot_me_vs_psindex <- function(df, y_lab) {
+  ggplot(df, aes(ps_index, uME_value)) +
+    geom_point(color = "gray60", alpha = 0.5, size = 0.3) +
+    geom_smooth(aes(color = color), method = "loess", se = TRUE, formula = y ~ x,
+                fill = "slategray2", linewidth = 0.7) +
+    scale_x_reverse(limits = c(1, 0)) +
+    scale_y_continuous(limits = c(-0.12, 0.16), breaks = c(-0.1, -0.05, 0, 0.05, 0.1, 0.15)) +
+    facet_wrap(~ module_label, nrow = 1) +
+    scale_color_identity() +
+    labs(x = "ps_index", y = y_lab) +
+    theme_classic(base_size = 9) +
+    theme(strip.background = element_blank(),
+          axis.text.x = element_text(size = 6, angle = 45, vjust = 1, hjust = 1),
+          panel.spacing = unit(4, "pt"), legend.position = "none")
+}
+p_me_und <- plot_me_vs_psindex(filter(ME_long_und, tissue == "stem"), "rhizome") /
+  plot_me_vs_psindex(filter(ME_long_und, tissue == "root"), "root")
+ggsave(file.path(out_dir, "12_MEs_psindex_und.tiff"), p_me_und,
+       width = 7.6, height = 2.8, units = "in", dpi = 600, compression = "lzw")
+
+# Root module eigengenes vs ps_index colored by season (Supplementary Figure 12)
+p_me_root_season <- ME_long_und %>%
+  filter(tissue == "root") %>%
+  left_join(meta_underground_remobilizer %>% select(sample_id, season), by = "sample_id") %>%
+  mutate(season = factor(season)) %>%
+  ggplot(aes(ps_index, uME_value, color = season)) +
+  geom_point(alpha = 0.6, size = 0.6) +
+  scale_color_manual(values = c("2023" = "#66C2A5", "2024" = "#FC8D62"), name = "Season") +
+  scale_x_reverse(limits = c(1, 0), breaks = c(1, 0.75, 0.5, 0.25, 0),
+                  labels = c("1.00", "0.75", "0.50", "0.25", "0.00")) +
+  scale_y_continuous(limits = c(-0.13, 0.16), breaks = c(-0.1, -0.05, 0, 0.05, 0.1, 0.15)) +
+  facet_wrap(~ module_label, nrow = 1) +
+  labs(x = "ps_index", y = "module eigengene") +
+  theme_classic(base_size = 9) +
+  theme(strip.background = element_blank(),
+        axis.text.x = element_text(size = 7, angle = 45, hjust = 1),
+        axis.text.y = element_text(size = 7))
+ggsave(file.path(out_dir, "12b_MEs_psindex_root_season.png"), p_me_root_season, width = 14, height = 2.2, dpi = 300)
+
 # ==========================================
 # 8) kME, Hubs, and TOM-UMAP
 # ==========================================
@@ -353,5 +432,50 @@ p_dyn <- ggplot(df_plot_dyn, aes(UMAP1, UMAP2, color = z_med)) +
   theme_void()
 
 ggsave(file.path(out_dir, "16_TOM_UMAP_dynamics_allweeks_und.png"), p_dyn, width = 6.5, height = 1.8, dpi = 600)
+
+# GO bar plots, top 4 BP terms (Figure 5F um1_turquoise, 5G um2_blue)
+plot_go_bars <- function(module_color, top_n = 4) {
+  mnum <- modules_und$module_num[modules_und$color == module_color]
+  df <- all_go %>%
+    filter(module_num == unique(net_und$colors[moduleColors_und == module_color]), Ontology == "BP") %>%
+    arrange(desc(logP), desc(Count)) %>%
+    slice_head(n = top_n) %>%
+    mutate(term = factor(desc, levels = rev(desc)), max_logP = max(logP))
+  ggplot(df, aes(term, logP)) +
+    geom_col(fill = "white", width = 0.7, color = module_color, linewidth = 0.4, alpha = 0.7) +
+    geom_text(aes(y = 0.03 * max_logP, label = str_trunc(desc, 62)), fontface = "bold",
+              hjust = 0, size = 2.5) +
+    geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "orange", alpha = 0.6) +
+    coord_flip() +
+    labs(title = paste0("um", mnum, "_", module_color), y = expression(-log[10]("p.adj")), x = NULL) +
+    theme_classic(base_size = 10) +
+    theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), plot.margin = margin(5, 5, 5, 5))
+}
+ggsave(file.path(out_dir, "15_GO_bar_plot_um1_turquoise.png"), plot_go_bars("turquoise"), width = 3.1, height = 2.5, dpi = 600)
+ggsave(file.path(out_dir, "15_GO_bar_plot_um2_blue.png"), plot_go_bars("blue"), width = 3.1, height = 2.5, dpi = 600)
+
+# Weekly dynamics of selected modules on the TOM-UMAP; other OGs in grey
+dyn_colors <- rev(c("#ca1875","#ef2c69","#ff1744","#f06848","#fda25e","#fceba5","#f2f8d5","#e4f2f8"))
+plot_module_dynamics <- function(df_z, module_color, title = NULL) {
+  genes_mod <- colnames(DatExpr_und)[moduleColors_und == module_color]
+  ggplot() +
+    geom_point(data = filter(df_umap, !gene %in% genes_mod), aes(UMAP1, UMAP2),
+               color = "grey82", size = 0.4, alpha = 0.4, stroke = 0) +
+    geom_point(data = df_umap %>% select(gene, UMAP1, UMAP2) %>%
+                 inner_join(filter(df_z, gene %in% genes_mod), by = "gene"),
+               aes(UMAP1, UMAP2, color = z_med), size = 0.5, alpha = 0.95, stroke = 0) +
+    scale_color_gradientn(colors = dyn_colors, limits = c(-2, 2), oob = scales::squish, name = "z-score") +
+    coord_equal(expand = FALSE) +
+    facet_wrap(~ week, nrow = 1) +
+    labs(title = title) +
+    theme_void(base_size = 10) +
+    theme(strip.text = element_text(size = 10, face = "bold"), plot.margin = margin(5, 5, 5, 5))
+}
+
+# Figure 5H: remobilizer cohort, um1_turquoise (top) and um2_blue (bottom)
+p_dyn_mods <- plot_module_dynamics(df_z_week, "turquoise") / plot_module_dynamics(df_z_week, "blue") +
+  plot_layout(guides = "collect")
+ggsave(file.path(out_dir, "17_TOM_UMAP_dynamics_um1_um2.png"), p_dyn_mods, width = 6.5, height = 1.8, dpi = 600)
+
 
 cat("\n==== Underground WGCNA pipeline complete ====\n")

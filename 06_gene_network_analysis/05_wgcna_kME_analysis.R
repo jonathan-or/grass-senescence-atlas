@@ -187,11 +187,15 @@ df_grid_paired <- df_grid %>%
   pivot_longer(cols = any_of(annuals), names_to = "Annual", values_to = "kME_ann") %>%
   filter(!is.na(kME_per), !is.na(kME_ann))
 
-# Leaf Blue Grid
+# Leaf Blue Grid (Figure 6B)
 p_leaf_blue <- plot_kme_grid(df_grid_paired %>% filter(Network == "leaf", subnetwork == "blue"), "Leaf m2_blue Preservation")
 ggsave(file.path(out_dir, "15a_grid_leaf_blue_kME.png"), p_leaf_blue, width = 5, height = 3.5, dpi = 300)
 
-# Root Blue Grid
+# Root Turquoise Grid (Figure 6E)
+p_root_turq <- plot_kme_grid(df_grid_paired %>% filter(Network == "underground", subnetwork == "turquoise"), "Root um1_turquoise Preservation")
+ggsave(file.path(out_dir, "15d_grid_root_turquoise_kME.png"), p_root_turq, width = 5, height = 3.5, dpi = 300)
+
+# Root Blue Grid (Figure 6F)
 p_root_blue <- plot_kme_grid(df_grid_paired %>% filter(Network == "underground", subnetwork == "blue"), "Root um2_blue Preservation")
 ggsave(file.path(out_dir, "15b_grid_root_blue_kME.png"), p_root_blue, width = 5, height = 3.5, dpi = 300)
 
