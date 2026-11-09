@@ -29,7 +29,7 @@ The repository is organized into directories following the data processing and a
 
 ## Figures
 
-Scripts that draw each figure (run from the repository root). Schematics, photographs and metabolic maps (Figure 1A-B, 2A, 4; Supplementary Figures 1-2) were drawn by hand.
+Scripts that draw the panels of each figure (run from the repository root). The final figures were assembled from these panels in PowerPoint and exported as high-resolution TIFFs. Panels made of photographs, schematics and diagrams (Figure 1A-B, 2A, 4; Supplementary Figures 1-2) have no script; they were assembled in PowerPoint.
 
 | Figure | Script(s) |
 |---|---|

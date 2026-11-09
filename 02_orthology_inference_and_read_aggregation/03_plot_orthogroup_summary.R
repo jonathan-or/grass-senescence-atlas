@@ -5,7 +5,7 @@
 #   B  number of species represented per orthogroup (core set: all 14 species)
 #   C  number of genes per orthogroup, all orthogroups (dashed line: 75-gene limit); inset: core set
 #   D  share of each library's reads assigned to core orthogroups (2,685 libraries)
-# The species tree and schematic in panel A were drawn separately.
+# The species tree and the schematic in panel A were added when the figure was assembled in PowerPoint.
 #
 # Core set (as in 02_aggregate_counts_to_orthogroups.R): orthogroups with at least one gene in
 # each of the 14 species and at most 75 genes in total (16,778 orthogroups).
