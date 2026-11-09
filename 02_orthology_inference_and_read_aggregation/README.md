@@ -30,6 +30,12 @@ Following inference, the `Orthogroups.tsv` output was filtered to retain a core 
   - `Orthogroups.tsv.gz`: Output from OrthoFinder.
   - `02_orthology_inference_and_read_aggregation/count_data_frames.rds`: Output from script `01`.
 
+### 5. `03_plot_orthogroup_summary.R`
+- **Purpose**: Supplementary Figure 3 (panels A-D; the species tree and schematic in A were drawn separately): genes per species in core orthogroups, in any orthogroup and annotated in total (A, bars; also written to `plots/orthogroup_gene_sets_per_species.txt`); number of species per orthogroup (B); genes per orthogroup for all orthogroups and the core set (C); share of each library's reads in core orthogroups (D).
+- **Inputs**: `Orthogroups.tsv.gz`, `total_gene_counts_named.tsv` (annotated genes per species) and, for panel D, the per-species gene counts from script `01` plus `03_cross-species_transcriptome_analysis/data/og_counts.rds`. Panel D is skipped if the gene counts are not available.
+- **Usage**: `Rscript 02_orthology_inference_and_read_aggregation/03_plot_orthogroup_summary.R [counts_rds] [out_dir]` (defaults: `count_data_frames.rds` in this directory and `plots/`).
+- **Note**: the gene counts in the published panel A bars (e.g. 38,727 for *P. virgatum*) are 6-11% higher than the genes in the 16,778 core orthogroups used in the analysis (36,613 for *P. virgatum*), which is what this script plots; panels B-D match the published figure.
+
 ## Data Structure for Reproducibility
 
 To successfully run scripts `01` and `02`, a subset or full dataset must be structured as follows:

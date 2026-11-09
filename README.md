@@ -43,6 +43,7 @@ Scripts that draw each figure (run from the repository root). Schematics, photog
 | 5 | `06_gene_network_analysis/02_wgcna_underground.R` |
 | 6A, 6D | `06_gene_network_analysis/03_wgcna_module_preservation.R`, `04_wgcna_preservation_plotting.R` |
 | 6B-C, 6E-F | `06_gene_network_analysis/05_wgcna_kME_analysis.R` |
+| S3 | `02_orthology_inference_and_read_aggregation/03_plot_orthogroup_summary.R` |
 | S4 | `03_cross-species_transcriptome_analysis/06_merge_all_libraries.R`, `07_qc_all_libraries.R` |
 | S5 | `03_cross-species_transcriptome_analysis/08_qc_sensitivity.R` |
 | S6 | `03_cross-species_transcriptome_analysis/09_library_composition_and_season_pca.R` |
@@ -53,7 +54,7 @@ Scripts that draw each figure (run from the repository root). Schematics, photog
 | S11 | `05_N_quant/05_maize_gradient_source_sink.R` |
 | S12-S13 | `06_gene_network_analysis/02_wgcna_underground.R` |
 
-Not yet in the repository: the species tree (Figure 1D, Supplementary Figure 3A) and the orthogroup summary plots (Supplementary Figure 3B-D).
+Not yet in the repository: the species tree (Figure 1D, Supplementary Figure 3A).
 
 ## Getting Started
 
