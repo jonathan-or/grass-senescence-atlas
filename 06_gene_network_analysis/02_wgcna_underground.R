@@ -482,6 +482,8 @@ ggsave(file.path(out_dir, "17_TOM_UMAP_dynamics_um1_um2.png"), p_dyn_mods, width
 # (maize stalk and perennial rhizomes left out). Expression is the root-only VST of all root
 # libraries (as in 05_wgcna_kME_analysis.R); each OG is z-scored across the 2024 root libraries
 # of the three accessions shown, then split by accession.
+# The published panels were z-scored on counts without library-size normalization;
+# see the note on Supplementary Figure 13 in this module's README.
 sf13_accessions <- c(Zm = "Zm_lh287Xlh244", Td = "Td_Pete", Sn = "Sn_WI")
 root_meta_sf13 <- root_metadata_ps_index %>% mutate(sample_id = as.character(sample_id))
 vst_root <- plot_pca_ggplot2(
