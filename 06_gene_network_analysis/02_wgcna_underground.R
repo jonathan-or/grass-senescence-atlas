@@ -501,8 +501,10 @@ for (acc in names(sf13_accessions)) {
     left_join(select(meta_acc, sample_id, week), by = "sample_id") %>%
     group_by(gene, week) %>%
     summarise(z_med = median(z, na.rm = TRUE), .groups = "drop")
-  p_acc <- plot_module_dynamics(df_z_acc, "blue", "Dynamics by Week", point_size = 0.8, legend_title = "Expression (Z)")
-  ggsave(file.path(out_dir, paste0("18_TOM_UMAP_dynamics_um2_", acc, ".png")), p_acc, width = 10, height = 1.25, dpi = 480)
+  # Legend as in the published panels (colour bar taller than the plot, so it is cropped)
+  p_acc <- plot_module_dynamics(df_z_acc, "blue", "Dynamics by Week", legend_title = "Expression (Z)") +
+    guides(color = guide_colorbar(barwidth = 0.6, barheight = 5, title.position = "top"))
+  ggsave(file.path(out_dir, paste0("18_TOM_UMAP_dynamics_um2_", acc, ".png")), p_acc, width = 8, height = 1, dpi = 600)
 }
 
 
