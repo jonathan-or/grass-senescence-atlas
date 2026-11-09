@@ -2,7 +2,7 @@
 
 Analysis pipeline and scripts for the study:
 
-> Ojeda-Rivera JO, Oren E, Hsu S-K, Lepak N, La T, Zhai J, Stitzer MC, Yobi A, Angelovici R, Buckler ES, Romay MC. *A transcriptomic atlas of grass senescence reveals divergent underground sink networks promote nitrogen recycling in perennials.* Accepted; in production (full citation and DOI to be added on publication).
+> Ojeda-Rivera JO, Oren E, Hsu S-K, Lepak N, La T, Zhai J, Stitzer MC, Yobi A, Angelovici R, Buckler ES, Romay MC. *A transcriptomic atlas of grass senescence reveals divergent underground sink networks promote nitrogen recycling in perennials.* Accepted; in production (full citation and DOI to be added on publication). Preprint: [bioRxiv](https://www.biorxiv.org/content/10.64898/2026.05.05.723041v1).
 
 The atlas comprises 2,685 RNA-seq (BRB-seq) libraries from field-grown plants of 14 grass species in the Panicoideae (Poaceae), with maize and sorghum as annual references. It spans leaves, roots, stalks, and rhizomes across two seasons (2023 and 2024), from mid-growing season to senescence. A photosynthetic index (`ps_index`) aligns the leaf's transition from nitrogen sink to source across species, and co-expression network analysis compares leaf and underground nitrogen-recycling subnetworks between perennials and annuals.
 
