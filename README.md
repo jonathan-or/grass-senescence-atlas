@@ -27,6 +27,34 @@ The repository is organized into directories following the data processing and a
 - `05_N_quant/`: Integration of the `ps_index` with end-of-season nitrogen combustion tests and free amino acid quantification (UPLC-MS/MS), and validation on an independent base-to-tip maize leaf gradient.
 - `06_gene_network_analysis/`: WGCNA co-expression networks (leaf and underground) of N-remobilizing perennials, module preservation in annuals and other perennials, and comparative kME.
 
+## Figures
+
+Scripts that draw each figure (run from the repository root). Schematics, photographs and metabolic maps (Figure 1A-B, 2A, 4; Supplementary Figures 1-2) were drawn by hand.
+
+| Figure | Script(s) |
+|---|---|
+| 1C | `03_cross-species_transcriptome_analysis/02_consolidate_seasons.R` |
+| 1E | `03_cross-species_transcriptome_analysis/03_plot_PCA_and_UMAP.R` |
+| 2B-E | `03_cross-species_transcriptome_analysis/05_pseudotime_analysis.R` |
+| 2F-G | `04_photosynthetic_index/01_calculate_ps_index.R` |
+| 2H | `05_N_quant/02_amino_acid_analysis.R` |
+| 2I, 3A | `05_N_quant/01_combustion_analysis.R` |
+| 3B-G | `06_gene_network_analysis/01_wgcna_leaf.R` |
+| 5 | `06_gene_network_analysis/02_wgcna_underground.R` |
+| 6A, 6D | `06_gene_network_analysis/03_wgcna_module_preservation.R`, `04_wgcna_preservation_plotting.R` |
+| 6B-C, 6E-F | `06_gene_network_analysis/05_wgcna_kME_analysis.R` |
+| S4 | `03_cross-species_transcriptome_analysis/06_merge_all_libraries.R`, `07_qc_all_libraries.R` |
+| S5 | `03_cross-species_transcriptome_analysis/08_qc_sensitivity.R` |
+| S6 | `03_cross-species_transcriptome_analysis/09_library_composition_and_season_pca.R` |
+| S7 | `03_cross-species_transcriptome_analysis/05_pseudotime_analysis.R` |
+| S8 | `05_N_quant/02_amino_acid_analysis.R` |
+| S9 | `05_N_quant/03_wang_validation.R` |
+| S10 | `05_N_quant/04_n_allocation_all_accessions.R` |
+| S11 | `05_N_quant/05_maize_gradient_source_sink.R` |
+| S12 | `06_gene_network_analysis/02_wgcna_underground.R` |
+
+Not yet in the repository: the species tree (Figure 1D, Supplementary Figure 3A), the orthogroup summary plots (Supplementary Figure 3B-D) and the per-accession um2_blue dynamics (Supplementary Figure 13).
+
 ## Getting Started
 
 Each directory contains its own `README.md` with specific instructions on how to run the pipeline for that objective.
