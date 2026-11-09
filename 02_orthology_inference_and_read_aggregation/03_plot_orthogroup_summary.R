@@ -1,6 +1,7 @@
 # 03_plot_orthogroup_summary.R
 # Supplementary Figure 3: definition of the core set of orthogroups.
-#   A  genes per species: in core orthogroups, in any orthogroup, and annotated in total (bars)
+#   A  genes per species: in core orthogroups, in any orthogroup, and annotated in total (bars;
+#      written as published and with the analysis core set, see below)
 #   B  number of species represented per orthogroup (core set: all 14 species)
 #   C  number of genes per orthogroup, all orthogroups (dashed line: 75-gene limit); inset: core set
 #   D  share of each library's reads assigned to core orthogroups (2,685 libraries)
@@ -47,6 +48,12 @@ cat("Orthogroups:", nrow(gene_num), "| in all", ncol(gene_num), "species:", sum(
 # ==========================================
 # A) Genes per species: core / assigned to an orthogroup / annotated
 # ==========================================
+# Two versions of the core segment are drawn:
+#   OG_plot.tiff       as published: the core segment counts genes in the first 16,778 of the 17,329
+#                      orthogroups present in all 14 species, in OrthoFinder order (largest first).
+#                      This set includes 551 orthogroups with more than 75 genes and leaves out 551
+#                      core orthogroups with 18-26 genes.
+#   OG_plot_core.tiff  the core set used in the analysis (all 14 species, <= 75 genes).
 total_genes <- read.delim(file.path(mod_dir, "total_gene_counts_named.tsv"))
 species_order <- c("Panicum_virgatum", "Elionorus_tripsacoides", "Tripsacum_dactyloides", "Zea_mays",
                    "Zea_diploperennis", "Chrysopogon_zizanioides", "Sorghastrum_nutans",
@@ -54,8 +61,12 @@ species_order <- c("Panicum_virgatum", "Elionorus_tripsacoides", "Tripsacum_dact
                    "Bothriochloa_laguroides", "Andropogon_gerardii", "Anatherum_virginicum",
                    "Schizachyrium_scoparium")  # top to bottom, as in the species tree
 
+in_all_species <- which(n_species == ncol(gene_num))
+as_published   <- seq_len(nrow(gene_num)) %in% in_all_species[seq_len(sum(is_core))]
+
 gene_sets <- tibble(Species = colnames(gene_num),
                     core = colSums(gene_num[is_core, ]),
+                    core_as_published = colSums(gene_num[as_published, ]),
                     assigned = colSums(gene_num)) %>%
   inner_join(total_genes, by = "Species") %>%
   mutate(Species = factor(Species, levels = rev(species_order)))
@@ -63,24 +74,28 @@ write.table(gene_sets, file.path(out_dir, "orthogroup_gene_sets_per_species.txt"
             sep = "\t", quote = FALSE, row.names = FALSE)
 print(as.data.frame(gene_sets))
 
-gene_sets_long <- gene_sets %>%
-  transmute(Species, core, assigned_only = assigned - core, unassigned = Total - assigned) %>%
-  pivot_longer(-Species, names_to = "set", values_to = "n") %>%
-  mutate(set = factor(set, levels = c("unassigned", "assigned_only", "core")))
-
-p_genes <- ggplot(gene_sets_long, aes(n, Species)) +
-  geom_col(aes(fill = Species, alpha = set), width = 0.8) +
-  geom_text(data = gene_sets, aes(x = 1500, label = core), hjust = 0, color = "white", size = 3.5) +
-  scale_fill_manual(values = species_palette, guide = "none") +
-  scale_alpha_manual(values = c(core = 1, assigned_only = 0.55, unassigned = 0.2), guide = "none") +
-  scale_x_continuous(breaks = seq(0, 225000, 25000), labels = label_number(scale = 1e-3, suffix = "K"),
-                     expand = expansion(mult = c(0, 0.02))) +
-  labs(x = "gene count", y = NULL) +
-  theme_classic(base_size = 10) +
-  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), axis.line.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1))
-ggsave(file.path(out_dir, "OG_plot.tiff"), p_genes, width = 5, height = 5, units = "in", dpi = 300,
-       compression = "lzw")
+plot_gene_sets <- function(core_col) {
+  bars <- gene_sets %>%
+    transmute(Species, Filtered = .data[[core_col]], Assigned = assigned, Total) %>%
+    pivot_longer(-Species, names_to = "Category", values_to = "Count")
+  labels <- gene_sets %>% transmute(Species, x_pos = .data[[core_col]] * 0.05, Label = .data[[core_col]])
+  ggplot(bars, aes(y = Species, x = Count, fill = Species, alpha = Category)) +
+    geom_bar(stat = "identity", position = "identity") +
+    geom_text(data = labels, aes(x = x_pos, y = Species, label = Label), hjust = 0, size = 2,
+              color = "white", inherit.aes = FALSE) +
+    scale_fill_manual(values = species_palette) +
+    scale_alpha_manual(values = c(Total = 0.2, Assigned = 0.5, Filtered = 1)) +
+    scale_x_continuous(breaks = seq(0, 225000, 25000), labels = label_number(scale_cut = cut_short_scale())) +
+    theme_classic(base_size = 8) +
+    labs(x = "gene count", y = NULL) +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1), axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(), legend.position = "none")
+}
+for (v in list(c("core_as_published", "OG_plot.tiff"), c("core", "OG_plot_core.tiff"))) {
+  tiff(file.path(out_dir, v[2]), width = 2.5, height = 2.5, units = "in", res = 600)
+  print(plot_gene_sets(v[1]))
+  dev.off()
+}
 
 # ==========================================
 # B) Number of species per orthogroup
